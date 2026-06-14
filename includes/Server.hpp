@@ -8,6 +8,10 @@
 #include <vector>
 #include <iomanip>
 #include <poll.h>
+#include <sys/epoll.h>
+#include <cstring>
+#include <fcntl.h>
+#include <iostream>
 
 class Server
 {
@@ -22,6 +26,7 @@ class Server
         Server(int port);
         ~Server();
         void init();
+        void start();
 };
 
 #endif

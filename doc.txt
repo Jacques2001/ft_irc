@@ -1,0 +1,50 @@
+socket :
+
+Creer la porte d'entree pour permettre
+la communication du serveur avec le client
+renvoie un fd en cas de reussite ou -1 en cas d'echec.
+
+=================================================================
+
+setsockopt : 
+
+fais en sorte de pouvoir reutiliser un port
+Par exemple si je lance mon programme, que je le quitte et que je le relance, sans
+cette fonction j'aurais une erreur du genre "port already in use"
+
+int setsockopt(int socket, int level, int option_name,
+       const void *option_value, socklen_t option_len);
+
+retourne 0 en cas de succes ou -1 en cas d'erreur
+
+=================================================================
+
+bind :
+
+prend mon socket et l'attache a une adresse ip locale et a un port specifique
+verifie si le port est deja utilise
+utile pour l'initialisation du serveur qui a besoin d'un port specifique
+
+0 = succes | -1 = erreur
+
+=================================================================
+
+listen :
+
+Techniquement, la fonction listen() transforme ton socket 
+(qui est bidirectionnel par défaut) en un socket passif. 
+Cela indique au système d'exploitation 
+que ce socket ne servira jamais à envoyer des données de son propre chef,
+mais qu'il servira uniquement à attendre et accepter des connexions entrantes.
+
+0 = succes | -1 = erreur
+
+=================================================================
+
+poll :
+
+La raison pour laquelle le sujet nous conseille d'utiliser un equivalent
+est parce que poll() parcourt toute la liste de client pour voir s'il y a du nouveau
+sur pas 100 clients la difference ne se fait pas sentir, sur 10 000, c'est tres lent.
+
+epoll() est un bon equivalent sur linux.

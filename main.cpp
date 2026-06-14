@@ -12,10 +12,12 @@ int main(int ac, char **av)
     try
     {
         Server serv(std::atoi(av[1]));
+        serv.init();
+        serv.start();
     }
     catch(const std::exception& e)
     {
-        std::cerr << e.what() << '\n';
+        std::cerr << "Error :" << e.what() << '\n';
     }
     return 0;
 }
