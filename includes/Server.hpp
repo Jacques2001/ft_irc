@@ -22,7 +22,7 @@ class Server
         int _serversocket;
         struct sockaddr_in _serverAddr;
         std::vector<struct pollfd> _fds;
-        void accept_new_client();
+        void accept_new_client(int epollfd);
 
     public :
         Server();

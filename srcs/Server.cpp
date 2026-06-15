@@ -16,7 +16,7 @@ Server::~Server()
 {
 }
 
-void Server::accept_new_client()
+void Server::accept_new_client(int epollfd)
 {
     std::cout << "Client connected" << std::endl;
 
@@ -27,7 +27,13 @@ void Server::accept_new_client()
         (struct sockaddr *)&client_addr, &addr_size);
     if (client_fd < 0)
         std::cerr << "not accepted" << std::endl;
-    // epoll_ctl(, )
+    struct epoll_event client_ev;
+    client_ev.events = EPOLLIN;
+    client_ev.data.fd = client_fd;
+    if (client_fd < 0)
+        std::cerr << "not accepted" << std::endl;
+     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, client_fd, &client_ev) < 0)
+        throw std::runtime_error("epoll_ctl(1)");
 }
 
 //configuration serveur et connection au reseau
@@ -78,25 +84,11 @@ void Server::start()
         for (int i = 0; i < ev_rdy; i++)
         {
             if (events[i].data.fd == _serversocket)
-            {
-                std::cout << "Client connected" << std::endl;
-                struct sockaddr_in client_addr;
-                socklen_t addr_size;
-                addr_size = sizeof(struct sockaddr_in);
-                int client_fd = accept(_serversocket, 
-                    (struct sockaddr *)&client_addr, &addr_size);
-                // struct epoll_event client_ev;
-                // client_ev.events = EPOLLIN;
-                // client_ev.data.fd = client_fd;
-                if (client_fd < 0)
-                    std::cerr << "not accepted" << std::endl;
-                 if (epoll_ctl(epollfd, EPOLL_CTL_ADD, client_fd, &) < 0)
-                    throw std::runtime_error("epoll_ctl(1)");
-            }
+                accept_new_client(epollfd);
             else
             {
                 std::cout << "msg" << std::endl;
-
+                break;
             }
         }
     }
