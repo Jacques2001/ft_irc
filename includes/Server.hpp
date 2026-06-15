@@ -13,6 +13,8 @@
 #include <fcntl.h>
 #include <iostream>
 
+#define MAX_EVENT 64
+
 class Server
 {
     private :
@@ -20,6 +22,7 @@ class Server
         int _serversocket;
         struct sockaddr_in _serverAddr;
         std::vector<struct pollfd> _fds;
+        void accept_new_client();
 
     public :
         Server();

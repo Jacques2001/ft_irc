@@ -16,6 +16,20 @@ Server::~Server()
 {
 }
 
+void Server::accept_new_client()
+{
+    std::cout << "Client connected" << std::endl;
+
+    struct sockaddr_in client_addr;
+    socklen_t addr_size;
+    addr_size = sizeof(struct sockaddr_in);
+    int client_fd = accept(_serversocket, 
+        (struct sockaddr *)&client_addr, &addr_size);
+    if (client_fd < 0)
+        std::cerr << "not accepted" << std::endl;
+    // epoll_ctl(, )
+}
+
 //configuration serveur et connection au reseau
 void Server::init()
 {
@@ -41,15 +55,49 @@ void Server::init()
 
 void Server::start()
 {
-    struct pollfd server_fd;
-    server_fd.fd = _serversocket;
-    server_fd.events = POLLIN;
-    server_fd.revents = 0;
-    _fds.push_back(server_fd);
+    int epollfd = epoll_create1(0);
+    if (epollfd < 0)
+        throw std::runtime_error("epoll_create1");
+
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.fd = _serversocket;
+
+    struct epoll_event events[MAX_EVENT];
+
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, _serversocket, &ev) < 0)
+        throw std::runtime_error("epoll_ctl");
+
     std::cout << "Server listening ..." << std::endl;
 
     while (1)
     {
-        
+        int ev_rdy = epoll_wait(epollfd, events, MAX_EVENT, -1);
+        if (ev_rdy < 0)
+            throw std::runtime_error("epoll_wait()");
+        for (int i = 0; i < ev_rdy; i++)
+        {
+            if (events[i].data.fd == _serversocket)
+            {
+                std::cout << "Client connected" << std::endl;
+                struct sockaddr_in client_addr;
+                socklen_t addr_size;
+                addr_size = sizeof(struct sockaddr_in);
+                int client_fd = accept(_serversocket, 
+                    (struct sockaddr *)&client_addr, &addr_size);
+                // struct epoll_event client_ev;
+                // client_ev.events = EPOLLIN;
+                // client_ev.data.fd = client_fd;
+                if (client_fd < 0)
+                    std::cerr << "not accepted" << std::endl;
+                 if (epoll_ctl(epollfd, EPOLL_CTL_ADD, client_fd, &) < 0)
+                    throw std::runtime_error("epoll_ctl(1)");
+            }
+            else
+            {
+                std::cout << "msg" << std::endl;
+
+            }
+        }
     }
 }
