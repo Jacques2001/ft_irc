@@ -20,6 +20,7 @@ void Server::accept_new_client(int epollfd)
 {
     std::cout << "Client connected" << std::endl;
 
+    // on accueille le nouveau client
     struct sockaddr_in client_addr;
     socklen_t addr_size;
     addr_size = sizeof(struct sockaddr_in);
@@ -27,14 +28,18 @@ void Server::accept_new_client(int epollfd)
         (struct sockaddr *)&client_addr, &addr_size);
     if (client_fd < 0)
         std::cerr << "not accepted" << std::endl;
+
     struct epoll_event client_ev;
     client_ev.events = EPOLLIN;
     client_ev.data.fd = client_fd;
-    if (client_fd < 0)
-        std::cerr << "not accepted" << std::endl;
      if (epoll_ctl(epollfd, EPOLL_CTL_ADD, client_fd, &client_ev) < 0)
         throw std::runtime_error("epoll_ctl(1)");
 }
+
+// void Server::rcv_new_msg()
+// {
+//     recv
+// }
 
 //configuration serveur et connection au reseau
 void Server::init()
@@ -61,6 +66,7 @@ void Server::init()
 
 void Server::start()
 {
+    int client_fd = -1;
     int epollfd = epoll_create1(0);
     if (epollfd < 0)
         throw std::runtime_error("epoll_create1");
@@ -78,18 +84,39 @@ void Server::start()
 
     while (1)
     {
-        int ev_rdy = epoll_wait(epollfd, events, MAX_EVENT, -1);
+        int ev_rdy = epoll_wait(epollfd, events, MAX_EVENT, -1); // endors le programme
         if (ev_rdy < 0)
             throw std::runtime_error("epoll_wait()");
         for (int i = 0; i < ev_rdy; i++)
         {
             if (events[i].data.fd == _serversocket)
-                accept_new_client(epollfd);
+            {
+                std::cout << "Client connected" << std::endl;
+
+                // on accueille le nouveau client
+                struct sockaddr_in client_addr;
+                socklen_t addr_size;
+                addr_size = sizeof(struct sockaddr_in);
+                client_fd = accept(_serversocket, 
+                    (struct sockaddr *)&client_addr, &addr_size);
+                if (client_fd < 0)
+                    std::cerr << "not accepted" << std::endl;
+
+                struct epoll_event client_ev;
+                client_ev.events = EPOLLIN;
+                client_ev.data.fd = client_fd;
+                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, client_fd, &client_ev) < 0)
+                    throw std::runtime_error("epoll_ctl(1)");
+            }
             else
             {
-                std::cout << "msg" << std::endl;
-                break;
+                char buf[1024];
+                int size_buf = recv(client_fd, buf, 1024, 0);
+                buf[size_buf] = '\0';
+                (void)size_buf;
+                std::cout << buf;
             }
         }
     }
+    close(epollfd);
 }

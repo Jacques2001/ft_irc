@@ -23,6 +23,7 @@ class Server
         struct sockaddr_in _serverAddr;
         std::vector<struct pollfd> _fds;
         void accept_new_client(int epollfd);
+        void rcv_new_msg();
 
     public :
         Server();
