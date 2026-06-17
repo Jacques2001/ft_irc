@@ -14,6 +14,8 @@
 #include <iostream>
 #include <signal.h>
 
+#include "Client.hpp"
+
 #define MAX_EVENT 64
 
 class Server

@@ -8,12 +8,11 @@ using namespace std;
 class Client
 {
     private :
+        int _client_fd;
         string _nickname;
         string _username;
     public :
         Client();
-        Client(const Client &other);
-        Client &operator=(const Client &other);
         ~Client();
 };
 
