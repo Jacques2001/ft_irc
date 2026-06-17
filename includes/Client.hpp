@@ -3,10 +3,13 @@
 
 #include <iostream>
 
+using namespace std;
+
 class Client
 {
     private :
-
+        string _nickname;
+        string _username;
     public :
         Client();
         Client(const Client &other);

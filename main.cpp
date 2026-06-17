@@ -3,12 +3,11 @@
 
 int main(int ac, char **av)
 {
-    (void)ac;
-    // if (ac != 3)
-    // {
-    //     std::cerr << "./ircserv <port> <password>" << std::endl;
-    //     return 1;
-    // }
+    if (ac != 3)
+    {
+        std::cerr << "./ircserv <port> <password>" << std::endl;
+        return 1;
+    }
     try
     {
         Server serv(std::atoi(av[1]));
