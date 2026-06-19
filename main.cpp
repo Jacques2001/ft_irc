@@ -10,7 +10,7 @@ int main(int ac, char **av)
     }
     try
     {
-        Server serv(std::atoi(av[1]));
+        Server serv(std::atoi(av[1]), av[2]);
         serv.init();
         serv.start();
     }

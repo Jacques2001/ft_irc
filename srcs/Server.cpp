@@ -1,5 +1,4 @@
 #include "../includes/Server.hpp"
-using namespace std;
 
 static volatile int keepRunning = 1;
 
@@ -13,18 +12,77 @@ void intHandler(int dummy)
 
 //memset pour eviter de retrouver des donnees "poubelles"
 //dans la structure _serverAddr
-Server::Server() : _port(0), _serversocket(-1)
+Server::Server() : _port(0), _serversocket(-1), _server_passcode("0")
 {
     std::memset(&_serverAddr, 0, sizeof(_serverAddr));
 }
 
-Server::Server(int port) : _port(port), _serversocket(-1)
+Server::Server(int port, string serverpass) : _port(port), _serversocket(-1), _server_passcode(serverpass)
 {
     std::memset(&_serverAddr, 0, sizeof(_serverAddr));
 }
 
 Server::~Server()
 {
+}
+
+bool Server::is_passcode(string line)
+{
+    return line == _server_passcode;
+}
+
+void Server::connection_process(string line, map<int, Client>::iterator it)
+{
+    stringstream ss(line);
+    string token;
+    ss >> token;
+    if (token == "PASS" || token == "NICK" || token == "USER")
+    {
+        if (token == "PASS")
+        {
+            ss >> token;
+            if (is_passcode(token) == true)
+                it->second.has_password();
+            else
+            {
+                string reply = "Error: password incorrect\r\n";
+                if (send(it->first, reply.c_str(), reply.length(), 0) < 0)
+                    cerr << "Error: not send" << endl;
+            }
+        }
+        else if (token == "NICK")
+        {
+            ss >> token;
+            it->second.set_nickname(token);
+            it->second.has_nickname();
+        }
+        else if (token == "USER")
+        {
+            ss >> token;
+            it->second.set_username(token);
+            it->second.has_username();
+        }
+    }
+    else
+    {   string reply = "You must be connected first\r\n";
+        if (send(it->first, reply.c_str(), reply.length(), 0) < 0)
+            cerr << "Error: not send" << endl;
+    }
+    if (it->second.get_password_status() && it->second.get_nickname_status()
+        && it->second.get_username_status())
+    {
+        it->second.set_connection(true);
+        string connected = "WELCOME ! You are connected to the server\r\n";
+        if (send(it->first, connected.c_str(), connected.length(), 0) < 0)
+            cerr << "Error: not send" << endl;
+    }
+}
+
+void Server::parse_line(string line, int curr_fd)
+{
+    map<int, Client>::iterator it = _clients.find(curr_fd);
+    if (it->second.get_connection() == 0)
+        connection_process(line, it);
 }
 
 //configuration serveur et connection au reseau
@@ -83,16 +141,20 @@ void Server::start()
         {
             if (events[i].data.fd == _serversocket) // si c'est un client qui rentre
             {
-                cout << "Client connected" << endl;
-
                 // on accueille le nouveau client
                 struct sockaddr_in client_addr;
                 socklen_t addr_size;
                 addr_size = sizeof(struct sockaddr_in);
                 client_fd = accept(_serversocket, 
-                    (struct sockaddr *)&client_addr, &addr_size); // on accepte le client
+                    (struct sockaddr *)&client_addr, &addr_size); // on accepte le client                    
                 if (client_fd < 0)
+                {
                     std::cerr << "not accepted" << endl;
+                    continue;
+                }
+                fcntl(client_fd, F_SETFL, O_NONBLOCK);
+                cout << "Client connected" << endl;
+                _clients.insert(make_pair(client_fd, Client(client_fd)));
 
                 struct epoll_event client_ev; // on ajoute le client dans la liste de surveillance
                 client_ev.events = EPOLLIN;
@@ -109,15 +171,26 @@ void Server::start()
                 if (size_buf == 0)
                 {
                     epoll_ctl(epollfd, EPOLL_CTL_DEL, curr_fd, NULL);
+                    _clients.erase(curr_fd);
                     close(curr_fd);
                     cout << "Client disconnected" << endl;
                 }
                 if (size_buf < 0)
                 {
                     close(curr_fd);
-                    throw runtime_error("recv");
+                    continue;
                 }
-                buf[size_buf] = '\0';
+                //ces lignes ci-dessous sont faites pour regler le probleme de 
+                //"donnees partielles" recues par recv()
+                _clients[curr_fd].appendToBuffer(buf, size_buf);
+                std::string &client_buffer = _clients[curr_fd].getBuffer();
+                size_t pos;
+                while ((pos = client_buffer.find("\r\n")) != std::string::npos)
+                {
+                    std::string line = client_buffer.substr(0, pos);
+                    client_buffer.erase(0, pos + 2);
+                    parse_line(line, curr_fd);
+                }
             }
         }
     }

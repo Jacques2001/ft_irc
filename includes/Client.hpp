@@ -11,9 +11,39 @@ class Client
         int _client_fd;
         string _nickname;
         string _username;
+        string  _password;
+        string _buffer;
+
+        bool _has_pass;
+        bool _has_nick;
+        bool _has_user;
+        bool _state;
+
     public :
         Client();
+        Client(int fd);
         ~Client();
+
+        int getfd() const;
+        string get_nickname() const;
+        string get_username() const;
+        bool get_connection() const;
+        string get_password() const;
+
+        void set_nickname(string nick);
+        void set_username(string user);
+        void set_connection(bool connect);
+
+        void has_password();
+        void has_nickname();
+        void has_username();
+
+        bool get_password_status();
+        bool get_nickname_status();
+        bool get_username_status();
+
+        void appendToBuffer(const char* data, int size);
+        std::string& getBuffer();
 };
 
 #endif
