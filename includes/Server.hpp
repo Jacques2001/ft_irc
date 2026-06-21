@@ -15,12 +15,18 @@
 #include <signal.h>
 #include <map>
 #include <sstream>
+#include <vector>
 
 #include "Client.hpp"
 
 using namespace std;
 
 #define MAX_EVENT 64
+#define pass_incorrect "Error: incorrect password\r\n"
+#define prior_connect "Error: you must be connected first\r\n"
+#define usr_not_found "Error: user not found\r\n"
+#define incor_format "Error: incorrect format\r\n"
+#define name_alrdy_taken "Error: nick or username already taken\r\n"
 
 class Server
 {
@@ -31,9 +37,11 @@ class Server
         struct sockaddr_in _serverAddr;
         std::vector<struct pollfd> _fds;
         string _server_passcode;
+        void handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it);
         void parse_line(string line, int curr_fd);
         void connection_process(string line, map<int, Client>::iterator it);
         bool is_passcode(string line);
+        bool check_double(string tokens, string flag);
 
     public :
         Server();

@@ -1,0 +1,7 @@
+Faire en sorte que le client puisse :
+rejoindre un channel (JOIN #channel)
+ecrire et recevoir des messages privees depuis le channel dans lequel il est
+
+Creer et implementer la classe channel
+
+implementer les operateurs

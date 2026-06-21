@@ -1,41 +1,14 @@
 #include "../includes/Client.hpp"
 
-Client::Client() : _client_fd(-1), _has_pass(0), _has_nick(0), _has_user(0), _state(0)
-{
-}
+Client::Client() : _client_fd(-1), _has_pass(0), _has_nick(0), _has_user(0), _state(0) {}
+Client::Client(int fd) : _client_fd(fd), _has_pass(0), _has_nick(0), _has_user(0), _state(0) {}
+Client::~Client() {}
 
-Client::Client(int fd) : _client_fd(fd), _has_pass(0), _has_nick(0), _has_user(0), _state(0)
-{
-}
-
-Client::~Client()
-{
-}
-
-int Client::getfd() const
-{
-    return _client_fd;
-}
-
-string Client::get_nickname() const
-{
-    return _nickname;
-}
-
-string Client::get_username() const
-{
-    return _username;
-}
-
-string Client::get_password() const
-{
-    return _password;
-}
-
-bool Client::get_connection() const
-{
-    return _state;
-}
+int Client::getfd() const {return _client_fd;}
+string Client::get_nickname() const {return _nickname;}
+string Client::get_username() const {return _username;}
+string Client::get_password() const {return _password;}
+bool Client::get_connection() const {return _state;}
 
 void Client::set_nickname(string nick) {_nickname = nick;}
 void Client::set_username(string user) {_username = user;}

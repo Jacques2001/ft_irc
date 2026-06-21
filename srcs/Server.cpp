@@ -22,60 +22,109 @@ Server::Server(int port, string serverpass) : _port(port), _serversocket(-1), _s
     std::memset(&_serverAddr, 0, sizeof(_serverAddr));
 }
 
-Server::~Server()
-{
-}
+Server::~Server() {}
 
 bool Server::is_passcode(string line)
 {
     return line == _server_passcode;
 }
 
+bool Server::check_double(string tokens, string flag)
+{
+    map<int, Client>::iterator it = _clients.begin();
+    for (; it != _clients.end(); ++it)
+    {
+        if (it->second.get_nickname() == tokens && flag == "nick")
+            return 1;
+        else if  (it->second.get_username() == tokens && flag == "user")
+            return 1;
+    }
+    return 0;
+}
+
+//cette fonction sert a verifier si le client a bien rentre le mdp, nickname et username
+//avant de valider la connection
 void Server::connection_process(string line, map<int, Client>::iterator it)
 {
     stringstream ss(line);
     string token;
-    ss >> token;
-    if (token == "PASS" || token == "NICK" || token == "USER")
+    vector<string> tokens;
+    while (ss >> token)
+        tokens.push_back(token);
+    if (tokens.size() < 2)
+        return ;
+    if (tokens[0] == "PASS" || tokens[0] == "NICK" || tokens[0] == "USER")
     {
-        if (token == "PASS")
+        if (tokens[0] == "PASS")
         {
-            ss >> token;
-            if (is_passcode(token) == true)
+            if (is_passcode(tokens[1]) == true)
                 it->second.has_password();
             else
-            {
-                string reply = "Error: password incorrect\r\n";
-                if (send(it->first, reply.c_str(), reply.length(), 0) < 0)
+                if (send(it->first, pass_incorrect, strlen(pass_incorrect), 0) < 0)
                     cerr << "Error: not send" << endl;
-            }
         }
-        else if (token == "NICK")
+        else if (tokens[0] == "NICK")
         {
-            ss >> token;
-            it->second.set_nickname(token);
+            if (check_double(tokens[1], "nick"))
+            {
+                if (send(it->first, name_alrdy_taken, strlen(name_alrdy_taken), 0) < 0)
+                    cerr << "Error: not send" << endl;
+                return ;
+            }
+            it->second.set_nickname(tokens[1]);
             it->second.has_nickname();
         }
-        else if (token == "USER")
+        else if (tokens[0] == "USER")
         {
-            ss >> token;
-            it->second.set_username(token);
+            if (check_double(tokens[1], "user"))
+            {
+                if (send(it->first, name_alrdy_taken, strlen(name_alrdy_taken), 0) < 0)
+                    cerr << "Error: not send" << endl;
+                return ;
+            }
+            it->second.set_username(tokens[1]);
             it->second.has_username();
         }
     }
     else
-    {   string reply = "You must be connected first\r\n";
-        if (send(it->first, reply.c_str(), reply.length(), 0) < 0)
+        if (send(it->first, prior_connect, strlen(prior_connect), 0) < 0)
             cerr << "Error: not send" << endl;
-    }
     if (it->second.get_password_status() && it->second.get_nickname_status()
         && it->second.get_username_status())
     {
+        string connected = "Welcome " + it->second.get_nickname() + " to the ft_irc network !\r\n";
         it->second.set_connection(true);
-        string connected = "WELCOME ! You are connected to the server\r\n";
         if (send(it->first, connected.c_str(), connected.length(), 0) < 0)
             cerr << "Error: not send" << endl;
     }
+}
+
+void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it)
+{
+    map<int, Client>::iterator ite = _clients.begin();
+    for (; ite != _clients.end(); ++ite)
+    {
+        if (ite->second.get_nickname() == tokens[1])
+            break;
+    }
+    if (ite == _clients.end())
+    {
+        if (send(it->first, usr_not_found, strlen(usr_not_found), 0) < 0)
+            cerr << "Error: not send" << endl;
+        return ;
+    }
+    if (tokens[2][0] != ':')
+    {
+        if (send(it->first, incor_format, strlen(incor_format), 0) < 0)
+            cerr << "Error: not send" << endl;
+    }
+    string final_msg = ":" + it->second.get_nickname() + "!" 
+                        + it->second.get_username() + "@127.0.0.1";
+    for (size_t i = 2; i < tokens.size(); i++)
+        final_msg.append(" " + tokens[i]);
+    final_msg += "\r\n";
+    if (send(ite->first, final_msg.c_str(), final_msg.length(), 0) < 0)
+        cerr << "Error: not send" << endl;
 }
 
 void Server::parse_line(string line, int curr_fd)
@@ -83,6 +132,13 @@ void Server::parse_line(string line, int curr_fd)
     map<int, Client>::iterator it = _clients.find(curr_fd);
     if (it->second.get_connection() == 0)
         connection_process(line, it);
+    stringstream ss(line);
+    string token;
+    vector<string> tokens;
+    while (ss >> token)
+        tokens.push_back(token);
+    if (tokens[0] == "PRIVMSG" && tokens.size() >= 3)
+        handle_prv_msg(tokens, it);
 }
 
 //configuration serveur et connection au reseau
@@ -95,7 +151,7 @@ void Server::init()
     int opt = 1;
     if (setsockopt(_serversocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
         throw runtime_error("setsockopt");
-    // fcntl faire en sorte que les connections au serveur soient non bloquantes
+    // fcntl fait en sorte que les connections au serveur soient non bloquantes
     if (fcntl(_serversocket, F_SETFL, O_NONBLOCK) < 0) 
         throw runtime_error("fcntl");
 
@@ -153,7 +209,7 @@ void Server::start()
                     continue;
                 }
                 fcntl(client_fd, F_SETFL, O_NONBLOCK);
-                cout << "Client connected" << endl;
+                cout << "Client " << client_fd << " connected" << endl;
                 _clients.insert(make_pair(client_fd, Client(client_fd)));
 
                 struct epoll_event client_ev; // on ajoute le client dans la liste de surveillance
@@ -173,7 +229,7 @@ void Server::start()
                     epoll_ctl(epollfd, EPOLL_CTL_DEL, curr_fd, NULL);
                     _clients.erase(curr_fd);
                     close(curr_fd);
-                    cout << "Client disconnected" << endl;
+                    cout << "Client " << curr_fd << " disconnected" << endl;
                 }
                 if (size_buf < 0)
                 {
