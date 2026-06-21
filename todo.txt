@@ -1,7 +1,14 @@
-Faire en sorte que le client puisse :
-rejoindre un channel (JOIN #channel)
-ecrire et recevoir des messages privees depuis le channel dans lequel il est
-
 Creer et implementer la classe channel
+le client doit pouvoir rejoindre un channel (JOIN #channel)
+il doit pouvoir ecrire et recevoir des messages depuis le channel dans lequel il est
+
 
 implementer les operateurs
+
+======================================================
+
+Un client qui rejoint un channel pour la premiere fois doit etre operateur
+JOIN #(channel) pour rejoindre
+PART #(channel) pour quitter
+http://chi.cs.uchicago.edu/chirc/irc_examples.html
+

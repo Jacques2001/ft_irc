@@ -28,6 +28,13 @@ using namespace std;
 #define incor_format "Error: incorrect format\r\n"
 #define name_alrdy_taken "Error: nick or username already taken\r\n"
 
+#define RED "\033[1;31m"
+#define GREEN "\033[1;32m"
+#define PURPLE "\033[1;35m"
+#define YELLOW "\033[1;33m"
+#define WHITE "\033[1;37m"
+#define RESET "\033[0m"
+
 class Server
 {
     private :
