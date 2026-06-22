@@ -16,6 +16,7 @@
 #include <map>
 #include <sstream>
 #include <vector>
+#include <arpa/inet.h>
 
 #include "Client.hpp"
 
@@ -27,6 +28,7 @@ using namespace std;
 #define usr_not_found "Error: user not found\r\n"
 #define incor_format "Error: incorrect format\r\n"
 #define name_alrdy_taken "Error: nick or username already taken\r\n"
+#define err_args "Error: argument not valid\r\n"
 
 #define RED "\033[1;31m"
 #define GREEN "\033[1;32m"

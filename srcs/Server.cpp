@@ -55,11 +55,15 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
     vector<string> tokens;
     while (ss >> token)
         tokens.push_back(token);
-    if (tokens.size() < 2)
+    if (tokens.size() != 2)
+    {
+        if (send(it->first, err_args, strlen(err_args), 0) < 0)
+            cerr << RED << "Error: not send" << RESET << endl;
         return ;
+    }
     if (tokens[0] == "PASS" || tokens[0] == "NICK" || tokens[0] == "USER")
     {
-        if (tokens[0] == "PASS")
+        if (tokens[0] == "PASS" && it->second.get_password_status() == 0)
         {
             if (is_passcode(tokens[1]) == true)
                 it->second.has_password();
@@ -67,7 +71,7 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
                 if (send(it->first, pass_incorrect, strlen(pass_incorrect), 0) < 0)
                    cerr << RED << "Error: not send" << RESET << endl;
         }
-        else if (tokens[0] == "NICK")
+        else if (tokens[0] == "NICK" && it->second.get_nickname_status() == 0)
         {
             if (check_double(tokens[1], "nick"))
             {
@@ -78,7 +82,7 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
             it->second.set_nickname(tokens[1]);
             it->second.has_nickname();
         }
-        else if (tokens[0] == "USER")
+        else if (tokens[0] == "USER" && it->second.get_username_status() == 0)
         {
             if (check_double(tokens[1], "user"))
             {
@@ -96,8 +100,8 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
     if (it->second.get_password_status() && it->second.get_nickname_status()
         && it->second.get_username_status())
     {
-        string connected = "Welcome " + it->second.get_nickname() 
-        + " to the ft_irc network !\r\n";
+        string connected = "Welcome " + it->second.get_nickname() + "!"  + it->second.get_username()
+        + "@127.0.0.1" + " to the ft_irc network !\r\n";
         it->second.set_connection(true);
         if (send(it->first, connected.c_str(), connected.length(), 0) < 0)
            cerr << RED << "Error: not send" << RESET << endl;
@@ -166,7 +170,7 @@ void Server::init()
     if (fcntl(_serversocket, F_SETFL, O_NONBLOCK) < 0) 
         throw runtime_error("fcntl");
 
-    _serverAddr.sin_family = AF_INET; // protocol iPv4
+    _serverAddr.sin_family = AF_INET; //IPv4
     _serverAddr.sin_port = htons(_port); // converti le type pour pouvoir l'envoyer a travers le reseau
     _serverAddr.sin_addr.s_addr = INADDR_ANY; //accepte n'importe quel type de connection
 

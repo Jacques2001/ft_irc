@@ -1,3 +1,27 @@
+Adresse IP
+
+Les adresses IP ont deux versions ou normes distinctes.
+L’adresse IPv4 (Internet Protocol version 4) est l’adresse la plus ancienne des deux, 
+qui peut accueillir jusqu’à 4 milliards d’adresses IP et est attribuée à tous les ordinateurs.
+La version 6 du protocole Internet (IPv6) la plus récente peut accueillir des milliards d’adresses IP, 
+ce qui représente la nouvelle génération d’appareils en plus des ordinateurs. Il existe également plusieurs types d’adresses IP, 
+y compris les adresses IP publiques, privées,  statiques et dynamiques.
+
+IPv4 est la quatrième version de l’IP. 
+Il s’agit de l’un des protocoles fondamentaux des méthodes basées sur des normes utilisées pour interconnecter Internet et d’autres réseaux. 
+Le protocole a été déployé pour la première fois sur l’Atlantic Packet Satellite Network (SATNET), 
+qui était un réseau satellite qui constituait un segment des premières étapes d’Internet, en 1982. 
+Il est toujours utilisé pour acheminer la plupart du trafic Internet malgré l’existence d’IPv6.
+
+IPv4 est actuellement attribué à tous les ordinateurs. 
+Une adresse IPv4 utilise des numéros binaires de 32 bits pour former une adresse IP unique. 
+Il prend le format de quatre ensembles de chiffres, chacun allant de 0 à 255 et représente un nombre binaire à huit chiffres, 
+séparé par un point de point.
+
+https://www.fortinet.com/fr/resources/cyberglossary/what-is-ip-address
+
+=================================================================
+
 socket :
 
 Creer la porte d'entree pour permettre
@@ -48,3 +72,11 @@ est parce que poll() parcourt toute la liste de client pour voir s'il y a du nou
 sur 100 clients la difference ne se fait pas sentir, sur 10 000, c'est tres lent.
 
 epoll() est un bon equivalent sur linux.
+
+=================================================================
+
+fcntl (file control) :
+
+realise une operation sur le file descriptor fd
+
+int fcntl(int fd, int op, ...);
