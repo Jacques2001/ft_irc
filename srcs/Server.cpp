@@ -101,7 +101,7 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
         && it->second.get_username_status())
     {
         string connected = "Welcome " + it->second.get_nickname() + "!"  + it->second.get_username()
-        + "@127.0.0.1" + " to the ft_irc network !\r\n";
+        + "@" + _ip_address + " to the ft_irc network !\r\n";
         it->second.set_connection(true);
         if (send(it->first, connected.c_str(), connected.length(), 0) < 0)
            cerr << RED << "Error: not send" << RESET << endl;
@@ -130,7 +130,7 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
            cerr << RED << "Error: not send" << RESET << endl;
     }
     string final_msg = ":" + it->second.get_nickname() + "!" 
-                        + it->second.get_username() + "@127.0.0.1";
+                        + it->second.get_username() + "@" + _ip_address;
     for (size_t i = 2; i < tokens.size(); i++)
         final_msg.append(" " + tokens[i]);
     final_msg += "\r\n";
@@ -191,7 +191,7 @@ void Server::start()
         throw runtime_error("epoll_create1");
 
     struct epoll_event ev;
-    ev.events = EPOLLIN;
+    ev.events = EPOLLIN; // evenements rentrants, lecture seule
     ev.data.fd = _serversocket;
 
     struct epoll_event events[MAX_EVENT]; // le nombre max d'event que mon serveur peut gerer
@@ -223,9 +223,11 @@ void Server::start()
                     cerr << RED <<  "not accepted" << RESET << endl;
                     continue;
                 }
-                fcntl(client_fd, F_SETFL, O_NONBLOCK);
+                if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0)
+                    throw runtime_error("fcntl(1)");
                 cout << GREEN << "Client " << client_fd << " connected" << RESET << endl;
-                _clients.insert(make_pair(client_fd, Client(client_fd)));
+                _clients.insert(make_pair(client_fd, Client(client_fd))); // on met le client dans notre std::map
+                _ip_address = inet_ntoa(client_addr.sin_addr); // on recupere l'adresse ip
 
                 struct epoll_event client_ev; // on ajoute le client dans la liste de surveillance
                 client_ev.events = EPOLLIN;

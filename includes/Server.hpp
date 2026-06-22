@@ -46,6 +46,7 @@ class Server
         struct sockaddr_in _serverAddr;
         std::vector<struct pollfd> _fds;
         string _server_passcode;
+        string _ip_address;
         void handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it);
         void parse_line(string line, int curr_fd);
         void connection_process(string line, map<int, Client>::iterator it);
