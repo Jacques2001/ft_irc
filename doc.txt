@@ -78,5 +78,26 @@ epoll() est un bon equivalent sur linux.
 fcntl (file control) :
 
 realise une operation sur le file descriptor fd
+dans le projet on change la propriete d'un fd qui est bloquant par defaut en non bloquant.
+c'est pour eviter que le serveur se fige quand il attend qu'un client fasse quelque chose
 
 int fcntl(int fd, int op, ...);
+
+=================================================================
+
+sites que j'aies utilisées
+
+programmation socket, pour la base du serveur
+https://www.geeksforgeeks.org/cpp/socket-programming-in-cpp/
+
+
+difference entre poll epoll kpoll
+raison pour laquelle j'ai pris epoll au lieu de poll (meme si a l'ecole on en a pas vraiment besoin)
+https://nima101.github.io/io_multiplexing
+
+comment utiliser epoll
+https://medium.com/granulate/using-epoll-might-wanna-think-about-batching-epoll-ctl-6d77e90bc3aa
+
+protocole irc
+https://mathieu-lemoine.developpez.com/tutoriels/irc/protocole/?page=generalites#L2-2
+http://chi.cs.uchicago.edu/chirc/irc_examples.html

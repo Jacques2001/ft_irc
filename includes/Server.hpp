@@ -19,6 +19,7 @@
 #include <arpa/inet.h>
 
 #include "Client.hpp"
+#include "Channel.hpp"
 
 using namespace std;
 
