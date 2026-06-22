@@ -11,6 +11,7 @@ RESET   = \033[0m
 SRCS        =   main.cpp \
                 srcs/Client.cpp \
                 srcs/Server.cpp \
+				srcs/Channel.cpp
 
 OBJS        = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 
@@ -19,7 +20,7 @@ CFLAGS      = -Wall -Wextra -Werror
 
 all: $(NAME)
 
-$(NAME): $(OBJS) includes/Server.hpp includes/Client.hpp
+$(NAME): $(OBJS) includes/Server.hpp includes/Client.hpp includes/Channel.hpp
 	@printf "$(CYAN)🔧 Linking: $(NAME)$(RESET)\n"
 	@$(CC) $(CFLAGS) $(OBJS) -o $(NAME)
 	@printf "$(GREEN)✅ Compilation terminée avec succès !$(RESET)\n"

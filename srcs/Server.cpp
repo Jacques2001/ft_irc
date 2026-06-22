@@ -138,6 +138,8 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 //elle va d'abord checker si le client a bien le droit d'envoyer des messages
 void Server::parse_line(string line, int curr_fd)
 {
+    if (line.empty())
+        return ;
     map<int, Client>::iterator it = _clients.find(curr_fd);
     if (it->second.get_connection() == 0)
         connection_process(line, it);
@@ -230,17 +232,17 @@ void Server::start()
             else // si le client ecrit
             {
                 //recv est l'equivalent de la fonction read()
-                int curr_fd = events[i].data.fd;
-                char buf[1024];
-                int size_buf = recv(curr_fd, buf, 1024, 0);
-                if (size_buf == 0)
+                int curr_fd = events[i].data.fd; // on prend le fd de l'event
+                char buf[1024]; //buffer pour stocker le message du client
+                int size_buf = recv(curr_fd, buf, 1024, 0); //size_buf correspond a ce qui a pu etre lu
+                if (size_buf == 0) // si c'est = 0 c'est que le client s'est deconnecte
                 {
                     epoll_ctl(epollfd, EPOLL_CTL_DEL, curr_fd, NULL);
                     _clients.erase(curr_fd);
                     close(curr_fd);
                     cout << YELLOW << "Client " << curr_fd << " disconnected" << RESET << endl;
                 }
-                if (size_buf < 0)
+                if (size_buf < 0) // si c'est < 0  on continue quand meme le programme
                 {
                     close(curr_fd);
                     continue;
