@@ -140,6 +140,7 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 
 //cette fonction va parser et executer la ligne recu par le client
 //elle va d'abord checker si le client a bien le droit d'envoyer des messages
+//continuer a coder le channel
 void Server::parse_line(string line, int curr_fd)
 {
     if (line.empty())
@@ -154,6 +155,63 @@ void Server::parse_line(string line, int curr_fd)
         tokens.push_back(token);
     if (tokens[0] == "PRIVMSG" && tokens.size() >= 3)
         handle_prv_msg(tokens, it);
+    // if (tokens[0] == "JOIN")
+        
+}
+
+//cette fonction va gerer la connection de tous les nouveaux clients
+//et ajouter ce client a la liste de surveillance epoll
+void Server::handle_connection()
+{
+    // on accueille le nouveau client
+    struct sockaddr_in client_addr;
+    socklen_t addr_size;
+    addr_size = sizeof(struct sockaddr_in);
+    _client_fd = accept(_serversocket, 
+        (struct sockaddr *)&client_addr, &addr_size); // on accepte le client                    
+    if (_client_fd < 0)
+        cerr << RED <<  "not accepted" << RESET << endl;
+    if (fcntl(_client_fd, F_SETFL, O_NONBLOCK) < 0)
+        throw runtime_error("fcntl(1)");
+    cout << GREEN << "Client " << _client_fd << " connected" << RESET << endl;
+    _clients.insert(make_pair(_client_fd, Client(_client_fd))); // on met le client dans notre std::map
+    _ip_address = inet_ntoa(client_addr.sin_addr); // on recupere l'adresse ip
+
+    struct epoll_event client_ev; // on ajoute le client dans la liste de surveillance
+    client_ev.events = EPOLLIN;
+    client_ev.data.fd = _client_fd;
+    if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, _client_fd, &client_ev) < 0)
+        throw runtime_error("epoll_ctl(1)");
+}
+
+//cette fonction va gerer tout ce que le client (qui est connecte)
+//va entrer comme input
+void Server::handle_input(int i)
+{
+    //recv est l'equivalent de la fonction read()
+    int curr_fd = _events[i].data.fd; // on prend le fd de l'event
+    char buf[1024]; //buffer pour stocker le message du client
+    int size_buf = recv(curr_fd, buf, 1024, 0); //size_buf correspond a ce qui a pu etre lu
+    if (size_buf == 0) // si c'est = 0 c'est que le client s'est deconnecte
+    {
+        epoll_ctl(_epollfd, EPOLL_CTL_DEL, curr_fd, NULL);
+        _clients.erase(curr_fd);
+        close(curr_fd);
+        cout << YELLOW << "Client " << curr_fd << " disconnected" << RESET << endl;
+    }
+    if (size_buf < 0) // si c'est < 0  on continue quand meme le programme
+        close(curr_fd);
+    //ces lignes ci-dessous sont faites pour regler le probleme de 
+    //"donnees partielles" recues par recv()
+    _clients[curr_fd].appendToBuffer(buf, size_buf);
+    std::string &client_buffer = _clients[curr_fd].getBuffer();
+    size_t pos;
+    while ((pos = client_buffer.find("\r\n")) != std::string::npos)
+    {
+        std::string line = client_buffer.substr(0, pos);
+        client_buffer.erase(0, pos + 2);
+        parse_line(line, curr_fd);
+    }
 }
 
 //configuration serveur et connection au reseau
@@ -185,87 +243,34 @@ void Server::init()
 void Server::start()
 {
     signal(SIGINT, intHandler);
-    int client_fd = -1;
-    int epollfd = epoll_create1(0); // epollfd sera un fd qui surveillera les events
-    if (epollfd < 0)
+    _client_fd = -1;
+    _epollfd = epoll_create1(0); // _epollfd sera un fd qui surveillera les _events
+    if (_epollfd < 0)
         throw runtime_error("epoll_create1");
 
     struct epoll_event ev;
     ev.events = EPOLLIN; // evenements rentrants, lecture seule
     ev.data.fd = _serversocket;
 
-    struct epoll_event events[MAX_EVENT]; // le nombre max d'event que mon serveur peut gerer
-
-    //  ajoute mon serveur (_serversocket) dans la liste des evenements a surveiller (epollfd)
-    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, _serversocket, &ev) < 0)
+    //  ajoute mon serveur (_serversocket) dans la liste des evenements a surveiller (_epollfd)
+    if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, _serversocket, &ev) < 0)
         throw runtime_error("epoll_ctl");
 
     cout << PURPLE << "Server listening ..." << RESET << endl;
 
     while (keepRunning) // tant que je ne recois pas de signal ctrl + C
     {
-        int ev_rdy = epoll_wait(epollfd, events, MAX_EVENT, -1); // endors le programme
+        int ev_rdy = epoll_wait(_epollfd, _events, MAX_EVENT, -1); // endors le programme
         // le programme se reveillera quand il y aura un evenement a gerer
         if (ev_rdy < 0 && keepRunning)
             throw runtime_error("epoll_wait()");
         for (int i = 0; i < ev_rdy; i++) // rentre dans la boucle d'evenements
         {
-            if (events[i].data.fd == _serversocket) // si c'est un client qui rentre
-            {
-                // on accueille le nouveau client
-                struct sockaddr_in client_addr;
-                socklen_t addr_size;
-                addr_size = sizeof(struct sockaddr_in);
-                client_fd = accept(_serversocket, 
-                    (struct sockaddr *)&client_addr, &addr_size); // on accepte le client                    
-                if (client_fd < 0)
-                {
-                    cerr << RED <<  "not accepted" << RESET << endl;
-                    continue;
-                }
-                if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0)
-                    throw runtime_error("fcntl(1)");
-                cout << GREEN << "Client " << client_fd << " connected" << RESET << endl;
-                _clients.insert(make_pair(client_fd, Client(client_fd))); // on met le client dans notre std::map
-                _ip_address = inet_ntoa(client_addr.sin_addr); // on recupere l'adresse ip
-
-                struct epoll_event client_ev; // on ajoute le client dans la liste de surveillance
-                client_ev.events = EPOLLIN;
-                client_ev.data.fd = client_fd;
-                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, client_fd, &client_ev) < 0)
-                    throw runtime_error("epoll_ctl(1)");
-            }
+            if (_events[i].data.fd == _serversocket) // si c'est un client qui rentre
+                handle_connection();
             else // si le client ecrit
-            {
-                //recv est l'equivalent de la fonction read()
-                int curr_fd = events[i].data.fd; // on prend le fd de l'event
-                char buf[1024]; //buffer pour stocker le message du client
-                int size_buf = recv(curr_fd, buf, 1024, 0); //size_buf correspond a ce qui a pu etre lu
-                if (size_buf == 0) // si c'est = 0 c'est que le client s'est deconnecte
-                {
-                    epoll_ctl(epollfd, EPOLL_CTL_DEL, curr_fd, NULL);
-                    _clients.erase(curr_fd);
-                    close(curr_fd);
-                    cout << YELLOW << "Client " << curr_fd << " disconnected" << RESET << endl;
-                }
-                if (size_buf < 0) // si c'est < 0  on continue quand meme le programme
-                {
-                    close(curr_fd);
-                    continue;
-                }
-                //ces lignes ci-dessous sont faites pour regler le probleme de 
-                //"donnees partielles" recues par recv()
-                _clients[curr_fd].appendToBuffer(buf, size_buf);
-                std::string &client_buffer = _clients[curr_fd].getBuffer();
-                size_t pos;
-                while ((pos = client_buffer.find("\r\n")) != std::string::npos)
-                {
-                    std::string line = client_buffer.substr(0, pos);
-                    client_buffer.erase(0, pos + 2);
-                    parse_line(line, curr_fd);
-                }
-            }
+                handle_input(i);
         }
     }
-    close(epollfd); // on ferme le fd (il y a surement d'autres fd a fermer)
+    close(_epollfd); // on ferme le fd (il y a surement d'autres fd a fermer)
 }

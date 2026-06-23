@@ -1,4 +1,5 @@
 Creer et implementer la classe channel
+
 le client doit pouvoir rejoindre un channel (JOIN #channel)
 il doit pouvoir ecrire et recevoir des messages depuis le channel dans lequel il est
 

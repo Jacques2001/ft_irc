@@ -45,9 +45,9 @@ class Client
         void has_username();
 
         //checkers
-        bool get_password_status();
-        bool get_nickname_status();
-        bool get_username_status();
+        bool get_password_status() const;
+        bool get_nickname_status() const;
+        bool get_username_status() const;
 
         void appendToBuffer(const char* data, int size);
         std::string& getBuffer();

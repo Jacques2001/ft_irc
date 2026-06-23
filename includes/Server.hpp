@@ -41,6 +41,7 @@ using namespace std;
 class Server
 {
     private :
+        //server
         map<int, Client> _clients;
         int _port;
         int _serversocket;
@@ -48,11 +49,20 @@ class Server
         std::vector<struct pollfd> _fds;
         string _server_passcode;
         string _ip_address;
+
+        //clients
+        int _client_fd;
+        int _epollfd;
+        struct epoll_event _events[MAX_EVENT];
+
+        //method
         void handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it);
         void parse_line(string line, int curr_fd);
         void connection_process(string line, map<int, Client>::iterator it);
         bool is_passcode(string line);
         bool check_double(string tokens, string flag);
+        void handle_connection();
+        void handle_input(int i);
 
     public :
         Server();

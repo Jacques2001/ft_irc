@@ -1,10 +1,10 @@
 #include "../includes/Client.hpp"
 
 Client::Client() : _client_fd(-1), _has_pass(0),
- _has_nick(0), _has_user(0), _state(0), _is_operator(0) {}
+_has_nick(0), _has_user(0), _state(0), _is_operator(0) {}
 
 Client::Client(int fd) : _client_fd(fd), _has_pass(0),
- _has_nick(0), _has_user(0), _state(0), _is_operator(0) {}
+_has_nick(0), _has_user(0), _state(0), _is_operator(0) {}
 Client::~Client() {}
 
 int Client::getfd() const {return _client_fd;}
@@ -22,9 +22,9 @@ void Client::has_password() {_has_pass = 1;}
 void Client::has_nickname() {_has_nick = 1;}
 void Client::has_username() {_has_user = 1;}
 
-bool Client::get_password_status() {return _has_pass;}
-bool Client::get_nickname_status() {return _has_nick;}
-bool Client::get_username_status() {return _has_user;}
+bool Client::get_password_status() const {return _has_pass;}
+bool Client::get_nickname_status() const {return _has_nick;}
+bool Client::get_username_status() const {return _has_user;}
 
 void Client::appendToBuffer(const char* data, int size) {_buffer.append(data, size);}
 std::string &Client::getBuffer() {return _buffer;}
