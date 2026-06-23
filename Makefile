@@ -16,7 +16,7 @@ SRCS        =   main.cpp \
 OBJS        = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 
 CC          = c++ -g -std=c++98
-CFLAGS      = -Wall -Wextra -Werror
+CFLAGS      = -Wall -Wextra -Werror -Iincludes -MMD -MP
 
 all: $(NAME)
 
@@ -40,5 +40,7 @@ fclean: clean
 
 re: fclean all
 	@printf "$(GREEN)♻️  Rebuilding project...$(RESET)\n"
+
+-include $(DEP)
 
 .PHONY: all clean fclean re
