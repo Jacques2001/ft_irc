@@ -14,6 +14,7 @@ SRCS        =   main.cpp \
 				srcs/Channel.cpp
 
 OBJS        = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
+DEP			= $(OBJS:.o=.d)
 
 CC          = c++ -g -std=c++98
 CFLAGS      = -Wall -Wextra -Werror -Iincludes -MMD -MP

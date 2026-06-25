@@ -44,7 +44,7 @@ class Server
         //server
         map<int, Client> _clients;
         int _port;
-        int _serversocket;
+        int _socket_fd;
         struct sockaddr_in _serverAddr;
         std::vector<struct pollfd> _fds;
         string _server_passcode;
@@ -52,7 +52,7 @@ class Server
 
         //clients
         int _client_fd;
-        int _epollfd;
+        int _epoll_fd;
         struct epoll_event _events[MAX_EVENT];
 
         //method
