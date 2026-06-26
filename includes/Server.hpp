@@ -30,6 +30,7 @@ using namespace std;
 #define incor_format "Error: incorrect format\r\n"
 #define name_alrdy_taken "Error: nick or username already taken\r\n"
 #define err_args "Error: argument not valid\r\n"
+#define nick_too_long "Error: nickname cannot exceed 9 caracters\r\n"
 
 #define RED "\033[1;31m"
 #define GREEN "\033[1;32m"
@@ -48,10 +49,8 @@ class Server
         struct sockaddr_in _serverAddr;
         std::vector<struct pollfd> _fds;
         string _server_passcode;
-        string _ip_address;
 
         //clients
-        int _client_fd;
         int _epollfd;
         struct epoll_event _events[MAX_EVENT];
 
@@ -61,8 +60,11 @@ class Server
         void connection_process(string line, map<int, Client>::iterator it);
         bool is_passcode(string line);
         bool check_double(string tokens, string flag);
+        void set_nick(string tokens, map<int, Client>::iterator it);
+        void set_user(vector<string> tokens, map<int, Client>::iterator it);
         void handle_connection();
         void handle_input(int i);
+        void close_fds();
 
     public :
         Server();

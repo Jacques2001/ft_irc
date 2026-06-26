@@ -13,3 +13,13 @@ JOIN #(channel) pour rejoindre
 PART #(channel) pour quitter
 http://chi.cs.uchicago.edu/chirc/irc_examples.html
 
+
+
+A negative recv() result is passed as the string append length, potentially causing a crash. Handle
+    EAGAIN/EINTR, cleanup fatal errors, then return. srcs/Server.cpp:202
+
+Robustness:
+
+send() can be partial or return EAGAIN; currently messages may be truncated.
+SIGPIPE can terminate the server when sending to a disconnected socket.
+Input buffers have no size limit, allowing memory exhaustion.

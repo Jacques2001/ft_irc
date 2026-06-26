@@ -9,9 +9,11 @@ class Client
 {
     private :
         int _client_fd;
+        string _ip_addr;
         string _nickname;
         string _username;
-        string  _password;
+        string _realname;
+        string _password;
         string _buffer;
 
         bool _has_pass;
@@ -32,11 +34,14 @@ class Client
         string get_username() const;
         bool get_connection() const;
         string get_password() const;
+        string get_ip() const;
 
         //setters
         void set_nickname(string nick);
         void set_username(string user);
+        void set_realname(string real);
         void set_connection(bool connect);
+        void set_ip(string ip);
         void set_operator();
 
         //setters

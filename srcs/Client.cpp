@@ -12,10 +12,13 @@ string Client::get_nickname() const {return _nickname;}
 string Client::get_username() const {return _username;}
 string Client::get_password() const {return _password;}
 bool Client::get_connection() const {return _state;}
+string Client::get_ip() const {return _ip_addr;}
 
 void Client::set_nickname(string nick) {_nickname = nick;}
 void Client::set_username(string user) {_username = user;}
+void Client::set_realname(string real) {_realname = real;}
 void Client::set_connection(bool connect) {_state = connect;}
+void Client::set_ip(string ip) {_ip_addr = ip;}
 void Client::set_operator() {_is_operator = 1;}
 
 void Client::has_password() {_has_pass = 1;}
