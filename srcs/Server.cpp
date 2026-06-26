@@ -279,11 +279,17 @@ void Server::init()
 {
     _socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (_socket_fd < 0)
+    {
+        close(_socket_fd);
         throw runtime_error("socket");
+    }
 
     int opt = 1;
     if (setsockopt(_socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
+        close(_socket_fd);
         throw runtime_error("setsockopt");
+    }
 
     // fcntl fait en sorte que les connections au serveur soient non bloquantes
     if (fcntl(_socket_fd, F_SETFL, O_NONBLOCK) < 0) 
