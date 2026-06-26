@@ -12,6 +12,7 @@ string Client::get_nickname() const {return _nickname;}
 string Client::get_username() const {return _username;}
 string Client::get_password() const {return _password;}
 bool Client::get_connection() const {return _state;}
+bool Client::get_operator() const {return _is_operator;}
 
 void Client::set_nickname(string nick) {_nickname = nick;}
 void Client::set_username(string user) {_username = user;}

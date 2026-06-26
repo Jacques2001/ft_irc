@@ -12,13 +12,13 @@ void intHandler(int dummy)
 
 //memset pour eviter de retrouver des donnees "poubelles"
 //dans la structure _serverAddr
-Server::Server() : _port(0), _socket_fd(-1), _server_passcode("0")
+Server::Server() : _port(0), _socket_fd(-1), _server_passcode("0"), _oper_name("dave"), _oper_pass("jacqueslebg")
 {
     std::memset(&_serverAddr, 0, sizeof(_serverAddr));
 }
 
 Server::Server(int port, string serverpass) : _port(port), _socket_fd(-1),
- _server_passcode(serverpass)
+ _server_passcode(serverpass), _oper_name("dave"), _oper_pass("jacqueslebg")
 {
     std::memset(&_serverAddr, 0, sizeof(_serverAddr));
 }
@@ -110,7 +110,7 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
 
 //cette fonction sert a traiter les messages privees envoyees entre client
 //le format du message envoye suit les directives du protocole IRC
-void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it)
+void Server::handle_prv_msg(vector<string>& tokens, map<int, Client>::iterator it)
 {
     map<int, Client>::iterator ite = _clients.begin();
     for (; ite != _clients.end(); ++ite)
@@ -138,6 +138,44 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
        cerr << RED << "Error: not send" << RESET << endl;
 }
 
+void Server::handle_oper(vector<string>& tokens, map<int, Client>::iterator it)
+{
+    if (tokens.size() < 3)
+    {
+        string msg = "461 OPER :Not enough parameters\r\n";
+        send(it->first, msg.c_str(), msg.length(), 0);
+        return;
+    }
+
+    string oper_name = tokens[1];
+    string oper_pass = tokens[2];
+
+    if ( oper_name != _oper_name || oper_pass !=  _oper_pass)
+    {
+        string msg = "464 :Password incorrect\r\n";
+        send(it->first, msg.c_str(), msg.length(), 0);
+        return;
+    }
+
+    it->second.set_operator();
+
+    string msg = "381 :You are now an IRC operator\r\n";
+    send(it->first, msg.c_str(), msg.length(), 0);
+}
+
+void Server::exec_line(vector<string>& tokens,map<int, Client>::iterator it)
+{
+    if (tokens[0] == "PRIVMSG" && tokens.size() >= 3)
+        handle_prv_msg(tokens, it);
+    // else if (tokens[0] == "JOIN")
+    // {
+    //     handle_join(tokens, it);
+    // }
+    else if ((tokens[0] == "OPER"))
+        handle_oper(tokens, it);
+
+}
+
 //cette fonction va parser et executer la ligne recu par le client
 //elle va d'abord checker si le client a bien le droit d'envoyer des messages
 //continuer a coder le channel
@@ -145,43 +183,28 @@ void Server::parse_line(string line, int curr_fd)
 {
     if (line.empty())
         return ;
+
     map<int, Client>::iterator it = _clients.find(curr_fd);
-    if (it->second.get_connection() == 0)
-        connection_process(line, it);
+    if (it == _clients.end())
+        return;
+
     stringstream ss(line);
     string token;
     vector<string> tokens;
+
     while (ss >> token)
         tokens.push_back(token);
-    if (tokens[0] == "PRIVMSG" && tokens.size() >= 3)
-        handle_prv_msg(tokens, it);
-    // if (tokens[0] == "JOIN")
-        
-}
 
-//cette fonction va gerer la connection de tous les nouveaux clients
-//et ajouter ce client a la liste de surveillance epoll
-void Server::handle_connection()
-{
-    // on accueille le nouveau client
-    struct sockaddr_in client_addr;
-    socklen_t addr_size;
-    addr_size = sizeof(struct sockaddr_in);
-    _client_fd = accept(_socket_fd, 
-        (struct sockaddr *)&client_addr, &addr_size); // on accepte le client                    
-    if (_client_fd < 0)
-        cerr << RED <<  "not accepted" << RESET << endl;
-    if (fcntl(_client_fd, F_SETFL, O_NONBLOCK) < 0)
-        throw runtime_error("fcntl(1)");
-    cout << GREEN << "Client " << _client_fd << " connected" << RESET << endl;
-    _clients.insert(make_pair(_client_fd, Client(_client_fd))); // on met le client dans notre std::map
-    _ip_address = inet_ntoa(client_addr.sin_addr); // on recupere l'adresse ip
+    if (tokens.empty())
+        return;
 
-    struct epoll_event client_ev; // on ajoute le client dans la liste de surveillance
-    client_ev.events = EPOLLIN;
-    client_ev.data.fd = _client_fd;
-    if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _client_fd, &client_ev) < 0)
-        throw runtime_error("epoll_ctl(1)");
+    if (it->second.get_connection() == 0)
+    {
+        connection_process(line, it);
+        return;
+    }
+
+    exec_line(tokens, it);
 }
 
 //cette fonction va gerer tout ce que le client (qui est connecte)
@@ -212,6 +235,31 @@ void Server::handle_input(int i)
         client_buffer.erase(0, pos + 2);
         parse_line(line, curr_fd);
     }
+}
+
+//cette fonction va gerer la connection de tous les nouveaux clients
+//et ajouter ce client a la liste de surveillance epoll
+void Server::handle_connection()
+{
+    // on accueille le nouveau client
+    struct sockaddr_in client_addr;
+    socklen_t addr_size;
+    addr_size = sizeof(struct sockaddr_in);
+    _client_fd = accept(_socket_fd, 
+        (struct sockaddr *)&client_addr, &addr_size); // on accepte le client                    
+    if (_client_fd < 0)
+        cerr << RED <<  "not accepted" << RESET << endl;
+    if (fcntl(_client_fd, F_SETFL, O_NONBLOCK) < 0)
+        throw runtime_error("fcntl(1)");
+    cout << GREEN << "Client " << _client_fd << " connected" << RESET << endl;
+    _clients.insert(make_pair(_client_fd, Client(_client_fd))); // on met le client dans notre std::map
+    _ip_address = inet_ntoa(client_addr.sin_addr); // on recupere l'adresse ip
+
+    struct epoll_event client_ev; // on ajoute le client dans la liste de surveillance
+    client_ev.events = EPOLLIN;
+    client_ev.data.fd = _client_fd;
+    if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _client_fd, &client_ev) < 0)
+        throw runtime_error("epoll_ctl(1)");
 }
 
 //configuration serveur et connection au reseau
@@ -258,7 +306,11 @@ void Server::start()
         throw runtime_error("epoll_ctl");
 
     cout << PURPLE << "Server listening ..." << RESET << endl;
+}
 
+//boucle infinie qui s'arrete des qu'on recoit CTRL+C
+void Server::loop()
+{
     while (keepRunning) // tant que je ne recois pas de signal ctrl + C
     {
         int ev_rdy = epoll_wait(_epoll_fd, _events, MAX_EVENT, -1); // endors le programme

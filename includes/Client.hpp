@@ -32,6 +32,7 @@ class Client
         string get_username() const;
         bool get_connection() const;
         string get_password() const;
+        bool get_operator() const;
 
         //setters
         void set_nickname(string nick);

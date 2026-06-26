@@ -49,20 +49,29 @@ class Server
         std::vector<struct pollfd> _fds;
         string _server_passcode;
         string _ip_address;
+        const string _oper_pass;
+        const string _oper_name;
 
         //clients
         int _client_fd;
         int _epoll_fd;
         struct epoll_event _events[MAX_EVENT];
 
-        //method
-        void handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it);
+        //methods
+
+        //handle
+        void handle_prv_msg(vector<string>& tokens, map<int, Client>::iterator it);
+        void handle_join(vector<string>& tokens, map<int, Client>::iterator it);
+        void handle_oper(vector<string>& tokens, map<int, Client>::iterator it);
+
+
         void parse_line(string line, int curr_fd);
         void connection_process(string line, map<int, Client>::iterator it);
         bool is_passcode(string line);
         bool check_double(string tokens, string flag);
         void handle_connection();
         void handle_input(int i);
+        void exec_line(vector<string>& parsed_line, map<int, Client>::iterator it);
 
     public :
         Server();
@@ -70,6 +79,7 @@ class Server
         ~Server();
         void init();
         void start();
+        void loop();
 };
 
 #endif

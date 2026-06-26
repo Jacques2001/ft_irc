@@ -13,6 +13,7 @@ int main(int ac, char **av)
         Server serv(std::atoi(av[1]), av[2]);
         serv.init();
         serv.start();
+        serv.loop();
     }
     catch(const std::exception& e)
     {
