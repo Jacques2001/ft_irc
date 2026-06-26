@@ -12,12 +12,12 @@ void intHandler(int dummy)
 
 //memset pour eviter de retrouver des donnees "poubelles"
 //dans la structure _serverAddr
-Server::Server() : _port(0), _serversocket(-1), _server_passcode("0")
+Server::Server() : _port(0), _socket_fd(-1), _server_passcode("0")
 {
     std::memset(&_serverAddr, 0, sizeof(_serverAddr));
 }
 
-Server::Server(int port, string serverpass) : _port(port), _serversocket(-1),
+Server::Server(int port, string serverpass) : _port(port), _socket_fd(-1),
  _server_passcode(serverpass)
 {
     std::memset(&_serverAddr, 0, sizeof(_serverAddr));
@@ -33,23 +33,23 @@ void Server::close_fds()
     {
         if (it->first != -1) 
         {
-            if (_epollfd != -1)
-                epoll_ctl(_epollfd, EPOLL_CTL_DEL, it->first, NULL);
+            if (_epoll_fd != -1)
+                epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, it->first, NULL);
             close(it->first);
         }
     }
     _clients.clear();
 
-    if (_serversocket != -1)
+    if (_socket_fd != -1)
     {
-        close(_serversocket);
-        _serversocket = -1;
+        close(_socket_fd);
+        _socket_fd = -1;
     }
 
-    if (_epollfd != -1)
+    if (_epoll_fd != -1)
     {
-        close(_epollfd);
-        _epollfd = -1;
+        close(_epoll_fd);
+        _epoll_fd = -1;
     }
 }
 
@@ -226,7 +226,7 @@ void Server::handle_connection()
     struct sockaddr_in client_addr;
     socklen_t addr_size;
     addr_size = sizeof(struct sockaddr_in);
-    int client_fd = accept(_serversocket, 
+    int client_fd = accept(_socket_fd, 
         (struct sockaddr *)&client_addr, &addr_size); // on accepte le client                    
     if (client_fd < 0)
     {
@@ -242,7 +242,7 @@ void Server::handle_connection()
     struct epoll_event client_ev; // on ajoute le client dans la liste de surveillance
     client_ev.events = EPOLLIN;
     client_ev.data.fd = client_fd;
-    if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, client_fd, &client_ev) < 0)
+    if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client_fd, &client_ev) < 0)
         throw runtime_error("epoll_ctl(1)");
 }
 
@@ -256,8 +256,7 @@ void Server::handle_input(int i)
     int size_buf = recv(curr_fd, buf, 1024, 0); //size_buf correspond a ce qui a pu etre lu
     if (size_buf <= 0) // si c'est = 0 c'est que le client s'est deconnecte
     {
-        epoll_ctl(_epollfd, EPOLL_CTL_DEL, curr_fd, NULL);
-        close(curr_fd);
+        epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, curr_fd, NULL);
         _clients.erase(curr_fd);
         cout << YELLOW << "Client " << curr_fd << " disconnected" << RESET << endl;
         return ;
@@ -278,20 +277,18 @@ void Server::handle_input(int i)
 //configuration serveur et connection au reseau
 void Server::init()
 {
-    _serversocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (_serversocket < 0)
+    _socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (_socket_fd < 0)
         throw runtime_error("socket");
 
     int opt = 1;
-    if (setsockopt(_serversocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-    {
-        close(_serversocket);
+    if (setsockopt(_socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
         throw runtime_error("setsockopt");
-    }
+
     // fcntl fait en sorte que les connections au serveur soient non bloquantes
-    if (fcntl(_serversocket, F_SETFL, O_NONBLOCK) < 0) 
+    if (fcntl(_socket_fd, F_SETFL, O_NONBLOCK) < 0) 
     {
-        close(_serversocket);
+        close(_socket_fd);
         throw runtime_error("fcntl");
     }
 
@@ -299,14 +296,14 @@ void Server::init()
     _serverAddr.sin_port = htons(_port); // converti le type pour pouvoir l'envoyer a travers le reseau
     _serverAddr.sin_addr.s_addr = INADDR_ANY; //accepte n'importe quel type de connection
 
-    if (bind(_serversocket, (struct sockaddr*)&_serverAddr, sizeof(_serverAddr)) < 0)
+    if (bind(_socket_fd, (struct sockaddr*)&_serverAddr, sizeof(_serverAddr)) < 0)
     {
-        close(_serversocket);
+        close(_socket_fd);
         throw runtime_error("bind");
     }
-    if (listen(_serversocket, 5) < 0) // value to change to reveive more client
+    if (listen(_socket_fd, 5) < 0) // value to change to reveive more client
     {
-        close(_serversocket);
+        close(_socket_fd);
         throw runtime_error("listen");
     }
 }
@@ -316,29 +313,29 @@ void Server::init()
 void Server::start()
 {
     signal(SIGINT, intHandler);
-    _epollfd = epoll_create1(0); // _epollfd sera un fd qui surveillera les _events
-    if (_epollfd < 0)
+    _epoll_fd = epoll_create1(0); // _epollfd sera un fd qui surveillera les _events
+    if (_epoll_fd < 0)
         throw runtime_error("epoll_create1");
 
     struct epoll_event ev;
     ev.events = EPOLLIN; // evenements rentrants, lecture seule
-    ev.data.fd = _serversocket;
+    ev.data.fd = _socket_fd;
 
-    //  ajoute mon serveur (_serversocket) dans la liste des evenements a surveiller (_epollfd)
-    if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, _serversocket, &ev) < 0)
+    //  ajoute mon serveur (_socket_fd) dans la liste des evenements a surveiller (_epoll_fd)
+    if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _socket_fd, &ev) < 0)
         throw runtime_error("epoll_ctl");
 
     cout << PURPLE << "Server listening ..." << RESET << endl;
 
     while (keepRunning) // tant que je ne recois pas de signal ctrl + C
     {
-        int ev_rdy = epoll_wait(_epollfd, _events, MAX_EVENT, -1); // endors le programme
+        int ev_rdy = epoll_wait(_epoll_fd, _events, MAX_EVENT, -1); // endors le programme
         // le programme se reveillera quand il y aura un evenement a gerer
         if (ev_rdy < 0 && keepRunning)
             throw runtime_error("epoll_wait()");
         for (int i = 0; i < ev_rdy; i++) // rentre dans la boucle d'evenements
         {
-            if (_events[i].data.fd == _serversocket) // si c'est un client qui rentre
+            if (_events[i].data.fd == _socket_fd) // si c'est un client qui rentre
                 handle_connection();
             else // si le client ecrit
                 handle_input(i);
