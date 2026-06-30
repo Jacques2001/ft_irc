@@ -1,27 +1,59 @@
-Creer et implementer la classe channel
-
-le client doit pouvoir rejoindre un channel (JOIN #channel)
-il doit pouvoir ecrire et recevoir des messages depuis le channel dans lequel il est
-
-
-implementer les operateurs
-
-======================================================
-
-Un client qui rejoint un channel pour la premiere fois doit etre operateur
-JOIN #(channel) pour rejoindre
-PART #(channel) pour quitter
 http://chi.cs.uchicago.edu/chirc/irc_examples.html
 
+Le serveur IRC est fonctionnel avec nc, mais il doit maintenant être rendu compatible avec un vrai client IRC existant, par exemple irssi.
 
+Pour ça, il faut remplacer les messages texte actuels par des réponses au format IRC, principalement avec les réponses numériques IRC.
 
-Problemes restants a regler :
+Exemples :
 
-A negative recv() result is passed as the string append length, potentially causing a crash. Handle
-    EAGAIN/EINTR, cleanup fatal errors, then return. srcs/Server.cpp:202
+        Au lieu de :
 
-Robustness:
+        Error: channel not found
 
-send() can be partial or return EAGAIN; currently messages may be truncated.
-SIGPIPE can terminate the server when sending to a disconnected socket.
-Input buffers have no size limit, allowing memory exhaustion.
+        envoyer :
+
+        :ircserv 403 jacques #test :No such channel
+
+        Au lieu de :
+
+        Welcome jacques
+
+        envoyer :
+
+        :ircserv 001 jacques :Welcome to the ft_irc network jacques
+
+Il faut donc remplacer progressivement les sendToClient(...) qui envoient des messages simples par les vraies réponses IRC.
+
+Attention : il ne faut pas seulement remplacer les outputs existants, il faut aussi ajouter certains messages attendus par les clients IRC.
+
+Exemple important après un JOIN #test :
+
+        :jacques!user@ip JOIN #test
+        :ircserv 353 jacques = #test :@jacques bob
+        :ircserv 366 jacques #test :End of /NAMES list
+
+Codes importants à gérer en priorité :
+
+001 RPL_WELCOME
+331 RPL_NOTOPIC
+332 RPL_TOPIC
+353 RPL_NAMREPLY
+366 RPL_ENDOFNAMES
+
+401 ERR_NOSUCHNICK
+403 ERR_NOSUCHCHANNEL
+433 ERR_NICKNAMEINUSE
+461 ERR_NEEDMOREPARAMS
+464 ERR_PASSWDMISMATCH
+471 ERR_CHANNELISFULL
+473 ERR_INVITEONLYCHAN
+475 ERR_BADCHANNELKEY
+482 ERR_CHANOPRIVSNEEDED
+442 ERR_NOTONCHANNEL
+441 ERR_USERNOTINCHANNEL
+
+Références utiles :
+
+https://modern.ircdocs.horse/
+https://dd.ircdocs.horse/refs/numerics/
+https://www.rfc-editor.org/rfc/rfc2812

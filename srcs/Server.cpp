@@ -174,17 +174,13 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 
     if (tokens[1][0] == '#')
     {
-        // cout << PURPLE << "[DEBUG] PRIVMSG channel: [" << tokens[1] << "]" << RESET << endl;
         handle_channel_msg(tokens, it);
         return ;
     }
 
-    // cout << PURPLE << "[DEBUG] PRIVMSG user: [" << tokens[1] << "]" << RESET << endl;
     map<int, Client>::iterator ite = _clients.begin();
     for (; ite != _clients.end(); ++ite)
     {
-        // cout << PURPLE << "[DEBUG] compare with client nick: ["
-        //  << ite->second.get_nickname() << "]" << RESET << endl;
         if (ite->second.get_nickname() == tokens[1])
             break;
     }
@@ -218,9 +214,6 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 //continuer a coder le channel
 void Server::parse_line(string line, int curr_fd)
 {
-
-    // cout << YELLOW << "[DEBUG] fd " << curr_fd << " line: [" << line << "]" << RESET << endl;
-
     if (line.empty())
         return ;
 
@@ -240,11 +233,6 @@ void Server::parse_line(string line, int curr_fd)
 
     while (ss >> token)
         tokens.push_back(token);
-
-    // cout << BLUE << "[DEBUG] tokens:";
-    // for (size_t i = 0; i < tokens.size(); i++)
-    //     cout << " [" << tokens[i] << "]";
-    // cout << RESET << endl;
 
     if (tokens.empty())
         return ;
@@ -305,10 +293,6 @@ void Server::handle_input(int i)
     char buf[1024]; //buffer pour stocker le message du client
     int size_buf = recv(curr_fd, buf, 1024, 0); //size_buf correspond a ce qui a pu etre lu
 
-
-    // cout << BLUE << "[DEBUG] recv fd " << curr_fd
-    //  << " size: " << size_buf << RESET << endl;
-
     if (size_buf == 0) // si c'est = 0 c'est que le client s'est deconnecte
     {
         epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, curr_fd, NULL);
@@ -334,10 +318,6 @@ void Server::handle_input(int i)
         return ;
     }
 
-    // cout << BLUE << "[DEBUG] raw buffer: [";
-    // cout.write(buf, size_buf);
-    // cout << "]" << RESET << endl;
-
     //ces lignes ci-dessous sont faites pour regler le probleme de 
     //"donnees partielles" recues par recv()
     _clients[curr_fd].appendToBuffer(buf, size_buf);
@@ -352,9 +332,6 @@ void Server::handle_input(int i)
             line.erase(line.size() - 1);
 
         client_buffer.erase(0, pos + 1);
-
-        // cout << BLUE << "[DEBUG] parsed line before parse_line: ["
-            // << line << "]" << RESET << endl;
 
         parse_line(line, curr_fd);
     }
