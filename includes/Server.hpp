@@ -63,7 +63,8 @@ class Server
         void handle_topic(vector<string> tokens, map<int, Client>::iterator it);
         void handle_kick(vector<string> tokens, map<int, Client>::iterator it);
         void handle_invite(vector<string> tokens, map<int, Client>::iterator it);
-        
+        void handle_mode(vector<string> tokens, map<int, Client>::iterator it);
+         
         void parse_line(string line, int curr_fd);
         void connection_process(string line, map<int, Client>::iterator it);
         bool is_passcode(string line);

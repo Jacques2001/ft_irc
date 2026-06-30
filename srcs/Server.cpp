@@ -261,6 +261,10 @@ void Server::parse_line(string line, int curr_fd)
         handle_topic(tokens, it);
     else if (tokens[0] == "KICK")
         handle_kick(tokens, it);
+    else if (tokens[0] == "INVITE")
+        handle_invite(tokens, it);
+    else if (tokens[0] == "MODE")
+        handle_mode(tokens, it);
 }
 
 //cette fonction va gerer la connection de tous les nouveaux clients
@@ -358,7 +362,7 @@ void Server::handle_input(int i)
 
 void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 {
-    if (tokens.size() != 2)
+    if (tokens.size() < 2 || tokens.size() > 3)
     {
         sendToClient(it->first, incor_format);
         return ;
@@ -384,8 +388,30 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 
     if (channel.is_member(it->first))
         return ;
+    
+    if (channel.is_invite_only() && !channel.is_invited(it->first))
+    {
+        sendToClient(it->first, "Error: invite only channel\r\n");
+        return ;
+    }
+
+    if (channel.has_key())
+    {
+        if (tokens.size() != 3 || tokens[2] != channel.get_key())
+        {
+            sendToClient(it->first, "Error: bad channel key\r\n");
+            return ;
+        }
+    }
+
+    if (channel.has_limit() && channel.get_members().size() >= static_cast<size_t>(channel.get_limit()))
+    {
+        sendToClient(it->first, "Error: channel is full\r\n");
+        return ;
+    }
 
     channel.add_member(it->first);
+    channel.remove_invited(it->first);
 
     if (channelCreated)
         channel.add_operator(it->first);
@@ -546,6 +572,12 @@ void Server::handle_topic(vector<string> tokens, map<int, Client>::iterator it)
         return ;
     }
 
+    if (channel.is_topic_restricted() && !channel.is_operator(it->first))
+    {
+        sendToClient(it->first, "Error: you're not an operator on that channel\r\n");
+        return ;
+    }
+
     if (tokens[2].empty() || tokens[2][0] != ':')
     {
         sendToClient(it->first, incor_format);
@@ -633,6 +665,196 @@ void Server::handle_kick(vector<string> tokens, map<int, Client>::iterator it)
         _channels.erase(chanIt);
 }
 
+void Server::handle_invite(vector<string> tokens, map<int, Client>::iterator it)
+{
+    if (tokens.size() != 3)
+    {
+        sendToClient(it->first, incor_format);
+        return ;
+    }
+
+    string targetNick = tokens[1];
+    string channelName = tokens[2];
+
+    map<string, Channel>::iterator chanIt = _channels.find(channelName);
+    if (chanIt == _channels.end())
+    {
+        sendToClient(it->first, "Error: channel not found\r\n");
+        return ;
+    }
+
+    Channel& channel = chanIt->second;
+
+    if (!channel.is_member(it->first))
+    {
+        sendToClient(it->first, "Error: you're not on that channel\r\n");
+        return ;
+    }
+
+    if (channel.is_invite_only() && !channel.is_operator(it->first))
+    {
+        sendToClient(it->first, "Error: you're not an operator on that channel\r\n");
+        return ;
+    }
+
+    map<int, Client>::iterator targetIt = _clients.begin();
+    for (; targetIt != _clients.end(); ++targetIt)
+    {
+        if (targetIt->second.get_nickname() == targetNick)
+            break ;
+    }
+
+    if (targetIt == _clients.end())
+    {
+        sendToClient(it->first, "Error: user not found\r\n");
+        return ;
+    }
+
+    if (channel.is_member(targetIt->first))
+    {
+        sendToClient(it->first, "Error: user already on channel\r\n");
+        return ;
+    }
+
+    channel.add_invited(targetIt->first);
+
+    string inviteMsg = ":" + it->second.get_nickname() + "!"
+                     + it->second.get_username() + "@"
+                     + it->second.get_ip()
+                     + " INVITE " + targetNick + " " + channelName + "\r\n";
+
+    sendToClient(targetIt->first, inviteMsg);
+    sendToClient(it->first, "Invited " + targetNick + " to " + channelName + "\r\n");
+}
+
+void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
+{
+    if (tokens.size() < 3)
+    {
+        sendToClient(it->first, incor_format);
+        return ;
+    }
+
+    string channelName = tokens[1];
+    string mode = tokens[2];
+
+    map<string, Channel>::iterator chanIt = _channels.find(channelName);
+    if (chanIt == _channels.end())
+    {
+        sendToClient(it->first, "Error: channel not found\r\n");
+        return ;
+    }
+
+    Channel& channel = chanIt->second;
+
+    if (!channel.is_member(it->first))
+    {
+        sendToClient(it->first, "Error: you're not on that channel\r\n");
+        return ;
+    }
+
+    if (!channel.is_operator(it->first))
+    {
+        sendToClient(it->first, "Error: you're not an operator on that channel\r\n");
+        return ;
+    }
+
+    if (mode == "+i")
+        channel.set_invite_only(true);
+    else if (mode == "-i")
+        channel.set_invite_only(false);
+    else if (mode == "+t")
+        channel.set_topic_restricted(true);
+    else if (mode == "-t")
+        channel.set_topic_restricted(false);
+    else if (mode == "+k")
+    {
+        if (tokens.size() != 4)
+        {
+            sendToClient(it->first, incor_format);
+            return ;
+        }
+
+        channel.set_key(tokens[3]);
+    }
+    else if (mode == "-k")
+        channel.remove_key();
+    else if (mode == "+l")
+    {
+        if (tokens.size() != 4)
+        {
+            sendToClient(it->first, incor_format);
+            return ;
+        }
+
+        std::stringstream ss(tokens[3]);
+        int limit;
+        char leftover;
+
+        if (!(ss >> limit) || (ss >> leftover) || limit <= 0)
+        {
+            sendToClient(it->first, "Error: invalid channel limit\r\n");
+            return ;
+        }
+
+        channel.set_limit(limit);
+    }
+    else if (mode == "-l")
+        channel.remove_limit();
+    else if (mode == "+o" || mode == "-o")
+    {
+        if (tokens.size() != 4)
+        {
+            sendToClient(it->first, incor_format);
+            return ;
+        }
+
+        string targetNick = tokens[3];
+
+        map<int, Client>::iterator targetIt = _clients.begin();
+        for (; targetIt != _clients.end(); ++targetIt)
+        {
+            if (targetIt->second.get_nickname() == targetNick)
+                break ;
+        }
+
+        if (targetIt == _clients.end())
+        {
+            sendToClient(it->first, "Error: user not found\r\n");
+            return ;
+        }
+
+        if (!channel.is_member(targetIt->first))
+        {
+            sendToClient(it->first, "Error: user is not on that channel\r\n");
+            return ;
+        }
+
+        if (mode == "+o")
+            channel.add_operator(targetIt->first);
+        else
+            channel.remove_operator(targetIt->first);
+    }
+    else
+    {
+        sendToClient(it->first, "Error: unknown mode\r\n");
+        return ;
+    }
+    
+
+   string modeMsg = ":" + it->second.get_nickname() + "!"
+               + it->second.get_username() + "@"
+               + it->second.get_ip()
+               + " MODE " + channelName + " " + mode;
+
+    if (mode == "+k" || mode == "+l" || mode == "+o" || mode == "-o")
+        modeMsg += " " + tokens[3];
+
+    modeMsg += "\r\n";
+
+    sendToClient(it->first, modeMsg);
+    broadcastToChannel(channelName, modeMsg, it->first);
+}
 
 //configuration serveur et connection au reseau
 void Server::init()
