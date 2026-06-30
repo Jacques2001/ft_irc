@@ -1,4 +1,5 @@
 #include "../includes/Server.hpp"
+#include <errno.h>
 
 static volatile int keepRunning = 1;
 
@@ -12,13 +13,20 @@ void intHandler(int dummy)
 
 //memset pour eviter de retrouver des donnees "poubelles"
 //dans la structure _serverAddr
-Server::Server() : _port(0), _socket_fd(-1), _server_passcode("0")
+Server::Server()
+:   _port(0),
+    _socket_fd(-1),
+    _epoll_fd(-1),
+    _server_passcode("0")
 {
     std::memset(&_serverAddr, 0, sizeof(_serverAddr));
 }
 
-Server::Server(int port, string serverpass) : _port(port), _socket_fd(-1),
- _server_passcode(serverpass)
+Server::Server(int port, string serverpass)
+:   _port(port),
+    _socket_fd(-1),
+    _epoll_fd(-1),
+    _server_passcode(serverpass)
 {
     std::memset(&_serverAddr, 0, sizeof(_serverAddr));
 }
@@ -78,8 +86,7 @@ void Server::set_nick(string tokens, map<int, Client>::iterator it)
 {
     if (check_double(tokens, "nick"))
     {
-        if (send(it->first, name_alrdy_taken, strlen(name_alrdy_taken), 0) < 0)
-            cerr << RED << "Error: not send" << RESET << endl;
+        sendToClient(it->first, name_alrdy_taken);
         return ;
     }
     it->second.set_nickname(tokens);
@@ -90,15 +97,10 @@ void Server::set_user(vector<string> tokens, map<int, Client>::iterator it)
 {
     if (tokens.size() < 5)
         return ;
-    if (check_double(tokens[1], "user"))
-    {
-        if (send(it->first, name_alrdy_taken, strlen(name_alrdy_taken), 0) < 0)
-            cerr << RED << "Error: not send" << RESET << endl;
-        return ;
-    }
 
     string realname = tokens[4];
-    if (realname[0] != ':')
+
+    if (realname.empty() || realname[0] != ':')
         return ;
     realname = realname.substr(1);
 
@@ -127,8 +129,7 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
             it->second.has_password();
         else
         {
-            if (send(it->first, pass_incorrect, strlen(pass_incorrect), 0) < 0)
-                cerr << RED << "Error: not send" << RESET << endl;
+            sendToClient(it->first, pass_incorrect);
             return ;
         }
     }
@@ -138,8 +139,7 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
     {
         if (tokens[1].size() > 9)
         {
-            if (send(it->first, nick_too_long, strlen(nick_too_long), 0) < 0)
-                cerr << RED << "Error: not send" << RESET << endl;
+            sendToClient(it->first, nick_too_long);
             return ;
         }
         set_nick(tokens[1], it);
@@ -152,41 +152,65 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
         string connected = "Welcome " + it->second.get_nickname() + "!"  + it->second.get_username()
         + "@" + it->second.get_ip() + " to the ft_irc network !\r\n";
         it->second.set_connection(true);
-        if (send(it->first, connected.c_str(), connected.length(), 0) < 0)
-           cerr << RED << "Error: not send" << RESET << endl;
+        sendToClient(it->first, connected);
     }
+}
+
+void Server::sendToClient(int fd, const std::string& msg)
+{
+    if (send(fd, msg.c_str(), msg.length(), 0) < 0)
+        cerr << RED << "Error: not send" << RESET << endl;
 }
 
 //cette fonction sert a traiter les messages privees envoyees entre client
 //le format du message envoye suit les directives du protocole IRC
 void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it)
 {
+    if (tokens.size() < 3)
+    {
+        sendToClient(it->first, incor_format);
+        return ;
+    }
+
+    if (tokens[1][0] == '#')
+    {
+        // cout << PURPLE << "[DEBUG] PRIVMSG channel: [" << tokens[1] << "]" << RESET << endl;
+        handle_channel_msg(tokens, it);
+        return ;
+    }
+
+    // cout << PURPLE << "[DEBUG] PRIVMSG user: [" << tokens[1] << "]" << RESET << endl;
     map<int, Client>::iterator ite = _clients.begin();
     for (; ite != _clients.end(); ++ite)
     {
+        // cout << PURPLE << "[DEBUG] compare with client nick: ["
+        //  << ite->second.get_nickname() << "]" << RESET << endl;
         if (ite->second.get_nickname() == tokens[1])
             break;
     }
+
     if (ite == _clients.end())
     {
-        if (send(it->first, usr_not_found, strlen(usr_not_found), 0) < 0)
-           cerr << RED << "Error: not send" << RESET << endl;
+        sendToClient(it->first, usr_not_found);
         return ;
     }
+
     if (tokens[2][0] != ':')
     {
-        if (send(it->first, incor_format, strlen(incor_format), 0) < 0)
-           cerr << RED << "Error: not send" << RESET << endl;
+        sendToClient(it->first, incor_format);
         return ;
     }
+
     string final_msg = ":" + it->second.get_nickname() + "!" 
                         + it->second.get_username() + "@" + it->second.get_ip()
-                        + "PRIVMSG ";
+                        + " PRIVMSG " + tokens[1];
+
     for (size_t i = 2; i < tokens.size(); i++)
-        final_msg.append(" " + tokens[i]);
+        final_msg += " " + tokens[i];
+
     final_msg += "\r\n";
-    if (send(ite->first, final_msg.c_str(), final_msg.length(), 0) < 0)
-       cerr << RED << "Error: not send" << RESET << endl;
+
+    sendToClient(ite->first, final_msg);
 }
 
 //cette fonction va parser et executer la ligne recu par le client
@@ -194,28 +218,49 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 //continuer a coder le channel
 void Server::parse_line(string line, int curr_fd)
 {
+
+    // cout << YELLOW << "[DEBUG] fd " << curr_fd << " line: [" << line << "]" << RESET << endl;
+
     if (line.empty())
         return ;
+
     map<int, Client>::iterator it = _clients.find(curr_fd);
+    if (it == _clients.end())
+        return ;
+
     if (it->second.get_connection() == 0)
     {
         connection_process(line, it);
         return ;
     }
+
     stringstream ss(line);
     string token;
     vector<string> tokens;
+
     while (ss >> token)
         tokens.push_back(token);
+
+    // cout << BLUE << "[DEBUG] tokens:";
+    // for (size_t i = 0; i < tokens.size(); i++)
+    //     cout << " [" << tokens[i] << "]";
+    // cout << RESET << endl;
+
     if (tokens.empty())
         return ;
+
     if (tokens[0] == "NICK" && tokens.size() == 2)
         set_nick(tokens[1], it);
-    if (tokens[0] == "PRIVMSG" && tokens.size() >= 3)
+    else if (tokens[0] == "PRIVMSG" && tokens.size() >= 3)
         handle_prv_msg(tokens, it);
-    // if (tokens[0] == "JOIN")
-    // continuer le parsing, avec creation de channel etc
-        
+    else if (tokens[0] == "JOIN")
+        handle_join(tokens, it);
+    else if (tokens[0] == "PART")
+        handle_part(tokens, it);
+    else if (tokens[0] == "TOPIC")
+        handle_topic(tokens, it);
+    else if (tokens[0] == "KICK")
+        handle_kick(tokens, it);
 }
 
 //cette fonction va gerer la connection de tous les nouveaux clients
@@ -252,27 +297,342 @@ void Server::handle_input(int i)
 {
     //recv est l'equivalent de la fonction read()
     int curr_fd = _events[i].data.fd; // on prend le fd de l'event
+
     char buf[1024]; //buffer pour stocker le message du client
     int size_buf = recv(curr_fd, buf, 1024, 0); //size_buf correspond a ce qui a pu etre lu
-    if (size_buf <= 0) // si c'est = 0 c'est que le client s'est deconnecte
+
+
+    // cout << BLUE << "[DEBUG] recv fd " << curr_fd
+    //  << " size: " << size_buf << RESET << endl;
+
+    if (size_buf == 0) // si c'est = 0 c'est que le client s'est deconnecte
     {
         epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, curr_fd, NULL);
+        removeClientFromChannels(curr_fd);
+        close(curr_fd);
         _clients.erase(curr_fd);
+    
         cout << YELLOW << "Client " << curr_fd << " disconnected" << RESET << endl;
         return ;
     }
+
+    if (size_buf < 0)
+    {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return ;
+
+        epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, curr_fd, NULL);
+        removeClientFromChannels(curr_fd);
+        close(curr_fd);
+        _clients.erase(curr_fd);
+
+        cerr << RED << "Error: recv failed on client " << curr_fd << RESET << endl;
+        return ;
+    }
+
+    // cout << BLUE << "[DEBUG] raw buffer: [";
+    // cout.write(buf, size_buf);
+    // cout << "]" << RESET << endl;
+
     //ces lignes ci-dessous sont faites pour regler le probleme de 
     //"donnees partielles" recues par recv()
     _clients[curr_fd].appendToBuffer(buf, size_buf);
     std::string &client_buffer = _clients[curr_fd].getBuffer();
+
     size_t pos;
-    while ((pos = client_buffer.find("\r\n")) != std::string::npos)
+    while ((pos = client_buffer.find('\n')) != std::string::npos)
     {
         std::string line = client_buffer.substr(0, pos);
-        client_buffer.erase(0, pos + 2);
+
+        if (!line.empty() && line[line.size() - 1] == '\r')
+            line.erase(line.size() - 1);
+
+        client_buffer.erase(0, pos + 1);
+
+        // cout << BLUE << "[DEBUG] parsed line before parse_line: ["
+            // << line << "]" << RESET << endl;
+
         parse_line(line, curr_fd);
     }
 }
+
+void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
+{
+    if (tokens.size() != 2)
+    {
+        sendToClient(it->first, incor_format);
+        return ;
+    }
+
+    string channelName = tokens[1];
+
+    if (channelName.empty() || channelName[0] != '#')
+    {
+        sendToClient(it->first, incor_format);
+        return ;
+    }
+
+    bool channelCreated = false;
+
+    if (_channels.find(channelName) == _channels.end())
+    {
+        _channels[channelName] = Channel(channelName);
+        channelCreated = true;
+    }
+
+    Channel& channel = _channels[channelName];
+
+    if (channel.is_member(it->first))
+        return ;
+
+    channel.add_member(it->first);
+
+    if (channelCreated)
+        channel.add_operator(it->first);
+
+    string joinMsg = ":" + it->second.get_nickname() + "!"
+                   + it->second.get_username() + "@"
+                   + it->second.get_ip()
+                   + " JOIN " + channelName + "\r\n";
+
+    sendToClient(it->first, joinMsg);
+    broadcastToChannel(channelName, joinMsg, it->first);
+}
+
+void Server::handle_channel_msg(vector<string> tokens, map<int, Client>::iterator it)
+{
+    string channelName = tokens[1];
+
+    map<string, Channel>::iterator chanIt = _channels.find(channelName);
+    if (chanIt == _channels.end())
+    {
+        sendToClient(it->first, "Error: channel not found\r\n");
+        return ;
+    }
+
+    Channel& channel = chanIt->second;
+
+    if (!channel.is_member(it->first))
+    {
+        sendToClient(it->first, "Error: you're not on that channel\r\n");
+        return ;
+    }
+
+    if (tokens[2].empty() || tokens[2][0] != ':')
+    {
+        sendToClient(it->first, incor_format);
+        return ;
+    }
+
+    string final_msg = ":" + it->second.get_nickname() + "!"
+                     + it->second.get_username() + "@"
+                     + it->second.get_ip()
+                     + " PRIVMSG " + channelName;
+
+    for (size_t i = 2; i < tokens.size(); i++)
+        final_msg += " " + tokens[i];
+
+    final_msg += "\r\n";
+
+    broadcastToChannel(channelName, final_msg, it->first);
+}
+
+void Server::broadcastToChannel(const string& channelName, const string& msg, int exceptFd)
+{
+    map<string, Channel>::iterator chanIt = _channels.find(channelName);
+    if (chanIt == _channels.end())
+        return ;
+
+    set<int> members = chanIt->second.get_members();
+
+    for (set<int>::iterator it = members.begin(); it != members.end(); ++it)
+    {
+        int fd = *it;
+
+        if (fd == exceptFd)
+            continue ;
+
+        if (_clients.find(fd) != _clients.end())
+            sendToClient(fd, msg);
+    }
+}
+
+void Server::handle_part(vector<string> tokens, map<int, Client>::iterator it)
+{
+    if (tokens.size() != 2)
+    {
+        sendToClient(it->first, incor_format);
+        return ;
+    }
+
+    string channelName = tokens[1];
+
+    map<string, Channel>::iterator chanIt = _channels.find(channelName);
+    if (chanIt == _channels.end())
+    {
+        sendToClient(it->first, "Error: channel not found\r\n");
+        return ;
+    }
+
+    Channel& channel = chanIt->second;
+
+    if (!channel.is_member(it->first))
+    {
+        sendToClient(it->first, "Error: you're not on that channel\r\n");
+        return ;
+    }
+
+    string partMsg = ":" + it->second.get_nickname() + "!"
+                   + it->second.get_username() + "@"
+                   + it->second.get_ip()
+                   + " PART " + channelName + "\r\n";
+
+    sendToClient(it->first, partMsg);
+    broadcastToChannel(channelName, partMsg, it->first);
+
+    channel.remove_member(it->first);
+
+    if (channel.empty())
+        _channels.erase(chanIt);
+}
+
+void Server::removeClientFromChannels(int fd)
+{
+    map<string, Channel>::iterator it = _channels.begin();
+
+    while (it != _channels.end())
+    {
+        if (it->second.is_member(fd))
+            it->second.remove_member(fd);
+
+        if (it->second.empty())
+            _channels.erase(it++);
+        else
+            ++it;
+    }
+}
+
+void Server::handle_topic(vector<string> tokens, map<int, Client>::iterator it)
+{
+    if (tokens.size() < 2)
+    {
+        sendToClient(it->first, incor_format);
+        return ;
+    }
+
+    string channelName = tokens[1];
+
+    map<string, Channel>::iterator chanIt = _channels.find(channelName);
+    if (chanIt == _channels.end())
+    {
+        sendToClient(it->first, "Error: channel not found\r\n");
+        return ;
+    }
+
+    Channel& channel = chanIt->second;
+
+    if (!channel.is_member(it->first))
+    {
+        sendToClient(it->first, "Error: you're not on that channel\r\n");
+        return ;
+    }
+
+    if (tokens.size() == 2)
+    {
+        if (channel.get_topic().empty())
+            sendToClient(it->first, "No topic is set\r\n");
+        else
+            sendToClient(it->first, "Topic: " + channel.get_topic() + "\r\n");
+        return ;
+    }
+
+    if (tokens[2].empty() || tokens[2][0] != ':')
+    {
+        sendToClient(it->first, incor_format);
+        return ;
+    }
+
+    string topic = tokens[2].substr(1);
+
+    for (size_t i = 3; i < tokens.size(); i++)
+        topic += " " + tokens[i];
+
+    channel.set_topic(topic);
+
+    string topicMsg = ":" + it->second.get_nickname() + "!"
+                    + it->second.get_username() + "@"
+                    + it->second.get_ip()
+                    + " TOPIC " + channelName + " :" + topic + "\r\n";
+
+    sendToClient(it->first, topicMsg);
+    broadcastToChannel(channelName, topicMsg, it->first);
+}
+
+void Server::handle_kick(vector<string> tokens, map<int, Client>::iterator it)
+{
+    if (tokens.size() < 3)
+    {
+        sendToClient(it->first, incor_format);
+        return ;
+    }
+
+    string channelName = tokens[1];
+    string targetKick = tokens[2];
+
+    map<string, Channel>::iterator chanIt = _channels.find(channelName);
+    if (chanIt == _channels.end())
+    {
+        sendToClient(it->first, "Error: channel not found\r\n");
+        return ;
+    }
+
+    Channel& channel = chanIt->second;
+
+    if (!channel.is_member(it->first))
+    {
+        sendToClient(it->first, "Error: you're not on that channel\r\n");
+        return ;
+    }
+
+    if (!channel.is_operator(it->first))
+    {
+        sendToClient(it->first, "Error: you're not an operator on that channel\r\n");
+        return ;
+    }
+
+    map<int, Client>::iterator userIt = _clients.begin();
+    for (; userIt != _clients.end(); ++userIt)
+    {
+        if (userIt->second.get_nickname() == targetKick)
+            break ;
+    }
+
+    if (userIt == _clients.end())
+    {
+        sendToClient(it->first, "Error: user not found\r\n");
+        return ;
+    }
+
+    if (!channel.is_member(userIt->first))
+    {
+        sendToClient(it->first, "Error: user is not on that channel\r\n");
+        return ;
+    }
+
+    string kickMsg = ":" + it->second.get_nickname() + "!"
+                   + it->second.get_username() + "@"
+                   + it->second.get_ip()
+                   + " KICK " + channelName + " " + targetKick + "\r\n";
+
+    sendToClient(it->first, kickMsg);
+    broadcastToChannel(channelName, kickMsg, it->first);
+
+    channel.remove_member(userIt->first);
+
+    if (channel.empty())
+        _channels.erase(chanIt);
+}
+
 
 //configuration serveur et connection au reseau
 void Server::init()

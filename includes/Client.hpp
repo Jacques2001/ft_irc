@@ -1,7 +1,7 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
-#include <iostream>
+#include <string>
 
 using namespace std;
 
@@ -13,15 +13,12 @@ class Client
         string _nickname;
         string _username;
         string _realname;
-        string _password;
         string _buffer;
 
         bool _has_pass;
         bool _has_nick;
         bool _has_user;
         bool _state;
-
-        bool _is_operator;
 
     public :
         Client();
@@ -33,8 +30,8 @@ class Client
         string get_nickname() const;
         string get_username() const;
         bool get_connection() const;
-        string get_password() const;
         string get_ip() const;
+        string get_realname() const;
 
         //setters
         void set_nickname(string nick);
@@ -42,7 +39,6 @@ class Client
         void set_realname(string real);
         void set_connection(bool connect);
         void set_ip(string ip);
-        void set_operator();
 
         //setters
         void has_password();

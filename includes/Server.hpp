@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <vector>
 #include <iomanip>
-#include <poll.h>
 #include <sys/epoll.h>
 #include <cstring>
 #include <fcntl.h>
@@ -20,6 +19,7 @@
 
 #include "Client.hpp"
 #include "Channel.hpp"
+
 
 using namespace std;
 
@@ -38,24 +38,32 @@ using namespace std;
 #define YELLOW "\033[1;33m"
 #define WHITE "\033[1;37m"
 #define RESET "\033[0m"
+#define BLUE "\033[1;34m"
 
 class Server
 {
     private :
         //server
         map<int, Client> _clients;
+        map<string, Channel> _channels;
+
         int _port;
         int _socket_fd;
+        int _epoll_fd;
+
         struct sockaddr_in _serverAddr;
-        std::vector<struct pollfd> _fds;
         string _server_passcode;
 
-        //clients
-        int _epoll_fd;
         struct epoll_event _events[MAX_EVENT];
 
         //method
         void handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it);
+        void handle_join(vector<string> tokens, map<int, Client>::iterator it);
+        void handle_part(vector<string> tokens, map<int, Client>::iterator it);
+        void handle_topic(vector<string> tokens, map<int, Client>::iterator it);
+        void handle_kick(vector<string> tokens, map<int, Client>::iterator it);
+        void handle_invite(vector<string> tokens, map<int, Client>::iterator it);
+        
         void parse_line(string line, int curr_fd);
         void connection_process(string line, map<int, Client>::iterator it);
         bool is_passcode(string line);
@@ -65,11 +73,16 @@ class Server
         void handle_connection();
         void handle_input(int i);
         void close_fds();
+        void sendToClient(int fd, const std::string& msg);
+        void broadcastToChannel(const string& channelName, const string& msg, int exceptFd);
+        void handle_channel_msg(vector<string> tokens, map<int, Client>::iterator it);
+        void removeClientFromChannels(int fd);
 
     public :
         Server();
         Server(int port, string serverpass);
         ~Server();
+        
         void init();
         void start();
 };

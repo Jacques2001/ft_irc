@@ -1,13 +1,20 @@
 #include "includes/Client.hpp"
 #include "includes/Server.hpp"
 
-void check_args(string av)
+void check_args(char** av)
 {
-    if (av.size() != 4)
+    if (!av[1] || !av[1][0])
         throw runtime_error("port incorrect");
-    for(size_t i = 0; i < av.size(); i++)
-        if (!isdigit(av[i]))
-            throw runtime_error("non digit port");
+
+    for (size_t i = 0 ; av[1][i]; ++i)
+    {
+        if (!isdigit(av[1][i]))
+                throw runtime_error("non digit port");
+    }
+
+    int port = std::atoi(av[1]);
+    if (port < 1024 || port > 65535)
+    throw runtime_error("port incorrect");
 }
 
 int main(int ac, char **av)
@@ -19,7 +26,7 @@ int main(int ac, char **av)
     }
     try
     {
-        check_args(av[1]);
+        check_args(av);
         Server serv(std::atoi(av[1]), av[2]);
         serv.init();
         serv.start();
