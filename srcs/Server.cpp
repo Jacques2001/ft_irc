@@ -88,7 +88,6 @@ void Server::set_nick(string tokens, map<int, Client>::iterator it)
 	{
 		std::string	msgError = ircServerMsg("433", it->second.get_nickname(), tokens, "Nickname is already in use");
 		sendToClient(it->first, msgError);
-		// sendToClient(it->first, name_alrdy_taken);
 		return ;
 	}
 	it->second.set_nickname(tokens);
