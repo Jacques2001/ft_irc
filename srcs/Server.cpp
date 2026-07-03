@@ -129,7 +129,8 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
 			it->second.has_password();
 		else
 		{
-			sendToClient(it->first, pass_incorrect);
+			std::string	msgError = ircServerMsg("464", "", "", "Password incorrect");
+			sendToClient(it->first, msgError);
 			return ;
 		}
 	}
