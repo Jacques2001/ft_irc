@@ -75,9 +75,14 @@ class Server
         void handle_input(int i);
         void close_fds();
         void sendToClient(int fd, const std::string& msg);
+
+        std::string ircServerMsg(const std::string& code, const std::string& nick, const std::string& params, const std::string& msg);
+
         void broadcastToChannel(const string& channelName, const string& msg, int exceptFd);
         void handle_channel_msg(vector<string> tokens, map<int, Client>::iterator it);
         void removeClientFromChannels(int fd);
+
+
 
     public :
         Server();
