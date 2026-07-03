@@ -32,8 +32,6 @@ using namespace std;
 #define err_args "Error: argument not valid\r\n"
 #define nick_too_long "Error: nickname cannot exceed 9 caracters\r\n"
 
-#define err_need_more_params "Not enough parameters"
-
 #define RED "\033[1;31m"
 #define GREEN "\033[1;32m"
 #define PURPLE "\033[1;35m"
