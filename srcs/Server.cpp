@@ -470,7 +470,8 @@ void Server::handle_channel_msg(vector<string> tokens, map<int, Client>::iterato
 
 	if (!channel.is_member(it->first))
 	{
-		sendToClient(it->first, "Error: you're not on that channel\r\n");
+		std::string	msgError = ircServerMsg("442", it->second.get_nickname(), channelName, "You're not on that channel");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -535,7 +536,8 @@ void Server::handle_part(vector<string> tokens, map<int, Client>::iterator it)
 
 	if (!channel.is_member(it->first))
 	{
-		sendToClient(it->first, "Error: you're not on that channel\r\n");
+		std::string	msgError = ircServerMsg("442", it->second.get_nickname(), channelName, "You're not on that channel");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -591,7 +593,8 @@ void Server::handle_topic(vector<string> tokens, map<int, Client>::iterator it)
 
 	if (!channel.is_member(it->first))
 	{
-		sendToClient(it->first, "Error: you're not on that channel\r\n");
+		std::string	msgError = ircServerMsg("442", it->second.get_nickname(), channelName, "You're not on that channel");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -655,7 +658,8 @@ void Server::handle_kick(vector<string> tokens, map<int, Client>::iterator it)
 
 	if (!channel.is_member(it->first))
 	{
-		sendToClient(it->first, "Error: you're not on that channel\r\n");
+		std::string	msgError = ircServerMsg("442", it->second.get_nickname(), channelName, "You're not on that channel");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -721,7 +725,8 @@ void Server::handle_invite(vector<string> tokens, map<int, Client>::iterator it)
 
 	if (!channel.is_member(it->first))
 	{
-		sendToClient(it->first, "Error: you're not on that channel\r\n");
+		std::string	msgError = ircServerMsg("442", it->second.get_nickname(), channelName, "You're not on that channel");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -784,7 +789,8 @@ void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
 
 	if (!channel.is_member(it->first))
 	{
-		sendToClient(it->first, "Error: you're not on that channel\r\n");
+		std::string	msgError = ircServerMsg("442", it->second.get_nickname(), channelName, "You're not on that channel");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
