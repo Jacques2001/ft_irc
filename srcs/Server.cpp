@@ -158,7 +158,7 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
 		{
 			if (tokens[1].size() > 9)
 			{
-				sendToClient(it->first, nick_too_long);
+				sendToClient(it->first, nick_too_long); // il faudrait gerer le message d'erreur irc ? comme 432 ? *****
 				return ;
 			}
 			set_nick(tokens[1], it);
@@ -461,7 +461,9 @@ void Server::handle_channel_msg(vector<string> tokens, map<int, Client>::iterato
 	map<string, Channel>::iterator chanIt = _channels.find(channelName);
 	if (chanIt == _channels.end())
 	{
-		sendToClient(it->first, "Error: channel not found\r\n");
+		std::string msgError = ircServerMsg("403", it->second.get_nickname(), channelName, "No such channel");
+		sendToClient(it->first, msgError);
+		// sendToClient(it->first, "Error: channel not found\r\n");
 		return ;
 	}
 
@@ -525,7 +527,9 @@ void Server::handle_part(vector<string> tokens, map<int, Client>::iterator it)
 	map<string, Channel>::iterator chanIt = _channels.find(channelName);
 	if (chanIt == _channels.end())
 	{
-		sendToClient(it->first, "Error: channel not found\r\n");
+		std::string msgError = ircServerMsg("403", it->second.get_nickname(), channelName, "No such channel");
+		sendToClient(it->first, msgError);
+		// sendToClient(it->first, "Error: channel not found\r\n");
 		return ;
 	}
 
@@ -580,7 +584,9 @@ void Server::handle_topic(vector<string> tokens, map<int, Client>::iterator it)
 	map<string, Channel>::iterator chanIt = _channels.find(channelName);
 	if (chanIt == _channels.end())
 	{
-		sendToClient(it->first, "Error: channel not found\r\n");
+		std::string msgError = ircServerMsg("403", it->second.get_nickname(), channelName, "No such channel");
+		sendToClient(it->first, msgError);
+		// sendToClient(it->first, "Error: channel not found\r\n");
 		return ;
 	}
 
@@ -643,7 +649,9 @@ void Server::handle_kick(vector<string> tokens, map<int, Client>::iterator it)
 	map<string, Channel>::iterator chanIt = _channels.find(channelName);
 	if (chanIt == _channels.end())
 	{
-		sendToClient(it->first, "Error: channel not found\r\n");
+		std::string msgError = ircServerMsg("403", it->second.get_nickname(), channelName, "No such channel");
+		sendToClient(it->first, msgError);
+		// sendToClient(it->first, "Error: channel not found\r\n");
 		return ;
 	}
 
@@ -708,7 +716,9 @@ void Server::handle_invite(vector<string> tokens, map<int, Client>::iterator it)
 	map<string, Channel>::iterator chanIt = _channels.find(channelName);
 	if (chanIt == _channels.end())
 	{
-		sendToClient(it->first, "Error: channel not found\r\n");
+		std::string msgError = ircServerMsg("403", it->second.get_nickname(), channelName, "No such channel");
+		sendToClient(it->first, msgError);
+		// sendToClient(it->first, "Error: channel not found\r\n");
 		return ;
 	}
 
@@ -770,7 +780,9 @@ void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
 	map<string, Channel>::iterator chanIt = _channels.find(channelName);
 	if (chanIt == _channels.end())
 	{
-		sendToClient(it->first, "Error: channel not found\r\n");
+		std::string msgError = ircServerMsg("403", it->second.get_nickname(), channelName, "No such channel");
+		sendToClient(it->first, msgError);
+		// sendToClient(it->first, "Error: channel not found\r\n");
 		return ;
 	}
 
