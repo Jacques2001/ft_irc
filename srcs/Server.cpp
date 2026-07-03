@@ -239,7 +239,8 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 
 	if (ite == _clients.end())
 	{
-		sendToClient(it->first, usr_not_found);
+		std::string	msgError = ircServerMsg("401", it->second.get_nickname(), tokens[1], "No such nick/channel");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -680,7 +681,8 @@ void Server::handle_kick(vector<string> tokens, map<int, Client>::iterator it)
 
 	if (userIt == _clients.end())
 	{
-		sendToClient(it->first, "Error: user not found\r\n");
+		std::string	msgError = ircServerMsg("401", it->second.get_nickname(), targetKick, "No such nick/channel");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -748,7 +750,8 @@ void Server::handle_invite(vector<string> tokens, map<int, Client>::iterator it)
 
 	if (targetIt == _clients.end())
 	{
-		sendToClient(it->first, "Error: user not found\r\n");
+		std::string	msgError = ircServerMsg("401", it->second.get_nickname(), targetNick, "No such nick/channel");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -865,7 +868,8 @@ void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
 
 		if (targetIt == _clients.end())
 		{
-			sendToClient(it->first, "Error: user not found\r\n");
+			std::string	msgError = ircServerMsg("401", it->second.get_nickname(), targetNick, "No such nick/channel");
+			sendToClient(it->first, msgError);
 			return ;
 		}
 
