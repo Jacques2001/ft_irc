@@ -123,30 +123,62 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
 		tokens.push_back(token);
 	if (tokens.empty())
 		return ;
-	if (tokens[0] == "PASS" && tokens.size() == 2 && it->second.get_password_status() == 0)
+	if (tokens[0] == "PASS")
 	{
-		if (is_passcode(tokens[1]) == true)
-			it->second.has_password();
-		else
+		if (tokens.size() != 2)
 		{
-			std::string	msgError = ircServerMsg("464", "", "", "Password incorrect");
+			std::string msgError = ircServerMsg("461", "", "PASS", "Not enough parameters");
 			sendToClient(it->first, msgError);
 			return ;
+		}
+		if (it->second.get_password_status() == 0)
+		{
+			if (is_passcode(tokens[1]) == true)
+				it->second.has_password();
+			else
+			{
+				std::string	msgError = ircServerMsg("464", "", "", "Password incorrect");
+				sendToClient(it->first, msgError);
+				return ;
+			}
 		}
 	}
 	if (it->second.get_password_status() == 0)
 		return ;
-	if (tokens[0] == "NICK" && tokens.size() == 2 && it->second.get_nickname_status() == 0)
+	if (tokens[0] == "NICK")
 	{
-		if (tokens[1].size() > 9)
+		if (tokens.size() != 2)
 		{
-			sendToClient(it->first, nick_too_long);
+			std::string msgError = ircServerMsg("461", "", "NICK", "Not enough parameters");
+			sendToClient(it->first, msgError);
 			return ;
 		}
-		set_nick(tokens[1], it);
+		if (it->second.get_nickname_status() == 0)
+		{
+			if (tokens[1].size() > 9)
+			{
+				sendToClient(it->first, nick_too_long);
+				return ;
+			}
+			set_nick(tokens[1], it);
+		}
 	}
-	else if (tokens[0] == "USER" && tokens.size() >= 5 && it->second.get_username_status() == 0)
-		set_user(tokens, it);
+
+	// else if (tokens[0] == "USER" && tokens.size() >= 5 && it->second.get_username_status() == 0)
+	// 	set_user(tokens, it);
+
+	if (tokens[0] == "USER")
+	{
+		if (tokens.size() < 5)
+		{
+			std::string	msgError = ircServerMsg("461", it->second.get_nickname(), "USER", "Not enough parameters");
+			sendToClient(it->first, msgError);
+			return ;
+		}
+		if (it->second.get_username_status() == 0)
+			set_user(tokens, it);
+	}
+
 	if (it->second.get_password_status() && it->second.get_nickname_status()
 		&& it->second.get_username_status() && it->second.get_connection() == 0)
 	{
