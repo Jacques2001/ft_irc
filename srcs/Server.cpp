@@ -220,6 +220,8 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 {
 	if (tokens.size() < 3)
 	{
+		// std::string msgError = ircServerMsg("461", it->second.get_nickname(), "PRIVMSG", "Not enough parameters");
+		// sendToClient(it->first, msgError);
 		sendToClient(it->first, incor_format);
 		return ;
 	}
@@ -246,7 +248,7 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 
 	if (tokens[2][0] != ':')
 	{
-		sendToClient(it->first, incor_format);
+		sendToClient(it->first, incor_format); // error 461 ou laisser ?? *****
 		return ;
 	}
 
@@ -456,6 +458,29 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 
 	sendToClient(it->first, joinMsg);
 	broadcastToChannel(channelName, joinMsg, it->first);
+
+	// 353 code: afficher les membres actuels dans le channel
+	// ex) :ircserv 353 clement = #bercy :@clement woojeong
+	std::string	nick_list; // pour sauvegarder tous les nicks dans le channel
+	set<int>	members_fd = channel.get_members(); // pour sauvegarder la liste des membres fd
+
+	for (set<int>::iterator members_it = members_fd.begin(); members_it != members_fd.end(); ++members_it)
+	{
+		int	member_fd = *members_it; // recuperer fd actuel
+		if (!nick_list.empty()) // s'il y a deja des nick dans str, on ajoute un espace pour en ecrire un autre
+			nick_list += ' '; 
+		if (channel.is_operator(member_fd)) // si le fd est operator, on ajoute @ au debut
+			nick_list += '@';
+		nick_list += _clients[member_fd].get_nickname(); // ajouter le nouveau nick de fd concernant
+	}
+
+	std::string	msg353 = ircServerMsg("353", it->second.get_nickname(), "= " + channelName, nick_list); // afficher le message du code 353
+	sendToClient(it->first, msg353);
+
+	// 366 code: afficher que la list de membres envoyes par 353 est fini
+	// ex) :ircserv 366 clement #bercy :End of /NAMES list
+	std::string	msg366 = ircServerMsg("366", it->second.get_nickname(), channelName, "End of /NAMES list");
+	sendToClient(it->first, msg366);
 }
 
 void Server::handle_channel_msg(vector<string> tokens, map<int, Client>::iterator it)
