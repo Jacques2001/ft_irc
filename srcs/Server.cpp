@@ -688,7 +688,8 @@ void Server::handle_kick(vector<string> tokens, map<int, Client>::iterator it)
 
 	if (!channel.is_member(userIt->first))
 	{
-		sendToClient(it->first, "Error: user is not on that channel\r\n");
+		std::string	msgError = ircServerMsg("441", it->second.get_nickname(), targetKick + " " + channelName, "They aren't on that channel");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -875,7 +876,8 @@ void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
 
 		if (!channel.is_member(targetIt->first))
 		{
-			sendToClient(it->first, "Error: user is not on that channel\r\n");
+			std::string	msgError = ircServerMsg("441", it->second.get_nickname(), targetNick + " " + channelName, "They aren't on that channel");
+			sendToClient(it->first, msgError);
 			return ;
 		}
 
