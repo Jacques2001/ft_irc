@@ -421,7 +421,8 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 	
 	if (channel.is_invite_only() && !channel.is_invited(it->first))
 	{
-		sendToClient(it->first, "Error: invite only channel\r\n");
+		std::string	msgError = ircServerMsg("473", it->second.get_nickname(), channelName, "Cannot join channel (+i)");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -429,14 +430,16 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 	{
 		if (tokens.size() != 3 || tokens[2] != channel.get_key())
 		{
-			sendToClient(it->first, "Error: bad channel key\r\n");
+			std::string	msgError = ircServerMsg("475", it->second.get_nickname(), channelName, "Cannot join channel (+k)");
+			sendToClient(it->first, msgError);
 			return ;
 		}
 	}
 
 	if (channel.has_limit() && channel.get_members().size() >= static_cast<size_t>(channel.get_limit()))
 	{
-		sendToClient(it->first, "Error: channel is full\r\n");
+		std::string	msgError = ircServerMsg("471", it->second.get_nickname(), channelName, "Cannot join channel (+l)");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
