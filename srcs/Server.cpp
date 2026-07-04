@@ -605,9 +605,15 @@ void Server::handle_topic(vector<string> tokens, map<int, Client>::iterator it)
 	if (tokens.size() == 2)
 	{
 		if (channel.get_topic().empty())
-			sendToClient(it->first, "No topic is set\r\n");
+		{
+			std::string	msgError = ircServerMsg("331", it->second.get_nickname(), channelName, "No topic is set");
+			sendToClient(it->first, msgError);
+		}
 		else
-			sendToClient(it->first, "Topic: " + channel.get_topic() + "\r\n");
+		{
+			std::string	msg = ircServerMsg("332", it->second.get_nickname(), channelName, channel.get_topic());
+			sendToClient(it->first, msg);	
+		}
 		return ;
 	}
 
