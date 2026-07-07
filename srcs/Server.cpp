@@ -218,10 +218,19 @@ std::string	Server::ircServerMsg(const std::string& code, const std::string& nic
 //le format du message envoye suit les directives du protocole IRC
 void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it)
 {
+	// pour gerer le cas de mettre que PRIVMSG -> 461 code
+	if (tokens.size() < 2)
+	{
+		std::string	msgError = ircServerMsg("461", it->second.get_nickname(), "PRIVMSG", "Not enough parameters");
+		sendToClient(it->first, msgError);
+		return ;
+	}
+
+	// 412: PRIVMSG #salle (pas de message) *****
 	if (tokens.size() < 3)
 	{
-		// *****
-		sendToClient(it->first, incor_format);
+		std::string	msgError = ircServerMsg("412", it->second.get_nickname(), "", "No text to send");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -293,7 +302,8 @@ void Server::parse_line(string line, int curr_fd)
 
 	if (tokens[0] == "NICK" && tokens.size() == 2)
 		set_nick(tokens[1], it);
-	else if (tokens[0] == "PRIVMSG" && tokens.size() >= 3)
+	// else if (tokens[0] == "PRIVMSG" && tokens.size() >= 3)
+	else if (tokens[0] == "PRIVMSG") // pour lier a handle_prv_msg, j'ai modifie cette partie
 		handle_prv_msg(tokens, it);
 	else if (tokens[0] == "JOIN")
 		handle_join(tokens, it);
@@ -401,7 +411,8 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 	if (tokens.size() < 2 || tokens.size() > 3)
 	{
 		// j'ai modifie comme 461 d'abord,
-		// parce que c'est le probleme sur parametres manquants ou invalides pour JOIN *****
+		// parce que c'est le probleme sur parametres manquants ou invalides pour JOIN 
+		// mais en fait, size > 3 c'est pas exactement "not enough parameters" alors je pose une question au cas ou *****
 		std::string msgError = ircServerMsg("461", it->second.get_nickname(), "JOIN", "Not enough parameters");
 		sendToClient(it->first, msgError);
 		// sendToClient(it->first, incor_format);
@@ -430,7 +441,7 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 	Channel& channel = _channels[channelName];
 
 	if (channel.is_member(it->first))
-		return ;
+		return ; // on ajoute un message supplementaire ou on laisse comme ca ? *****
 	
 	if (channel.is_invite_only() && !channel.is_invited(it->first))
 	{
@@ -515,7 +526,26 @@ void Server::handle_channel_msg(vector<string> tokens, map<int, Client>::iterato
 		return ;
 	}
 
-	if (tokens[2].empty() || tokens[2][0] != ':')
+	// 461 ? 412 ? c'est ambigu pour moi alors j'ai divise en 2 chaque condition *****
+	// if (tokens[2].empty() || tokens[2][0] != ':')
+	// {
+	// 	sendToClient(it->first, incor_format);
+	// 	return ;
+	// }
+
+	// ici j'ai choisi 412, parce qu'il y a pas de texte a envoyer *****
+	// on verifie d'abord tokens.size() < 3, car si tokens[2] n'existe pas, ca va provoquer une erreur
+	// if (tokens.size() < 3 || tokens[2].empty())
+	if (tokens[2].empty())
+	{
+		std::string	msgError = ircServerMsg("412", it->second.get_nickname(), "", "No text to send");
+		sendToClient(it->first, msgError);
+		return ;
+	}
+
+	// ici il manque que ':', alors j'ai d'abord laisse comme ca, 
+	// je sais pas quoi choisir comme code *****
+	if (tokens[2][0] != ':')
 	{
 		sendToClient(it->first, incor_format);
 		return ;
