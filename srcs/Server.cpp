@@ -791,9 +791,12 @@ void Server::handle_kick(vector<string> tokens, map<int, Client>::iterator it)
 
 void Server::handle_invite(vector<string> tokens, map<int, Client>::iterator it)
 {
+	// 461: le probleme sur parametres manquants ou invalides *****
 	if (tokens.size() != 3)
 	{
-		sendToClient(it->first, incor_format);
+		std::string msgError = ircServerMsg("461", it->second.get_nickname(), "INVITE", "Not enough parameters");
+		sendToClient(it->first, msgError);
+		// sendToClient(it->first, incor_format);
 		return ;
 	}
 
@@ -840,7 +843,9 @@ void Server::handle_invite(vector<string> tokens, map<int, Client>::iterator it)
 
 	if (channel.is_member(targetIt->first))
 	{
-		sendToClient(it->first, "Error: user already on channel\r\n");
+		std::string	msgError = ircServerMsg("443", it->second.get_nickname(), targetNick + " " + channelName, "is already on channel");
+		sendToClient(it->first, msgError);
+		// sendToClient(it->first, "Error: user already on channel\r\n");
 		return ;
 	}
 
