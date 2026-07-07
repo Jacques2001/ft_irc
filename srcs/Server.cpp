@@ -650,7 +650,6 @@ void Server::handle_topic(vector<string> tokens, map<int, Client>::iterator it)
 	{
 		std::string msgError = ircServerMsg("461", it->second.get_nickname(), "TOPIC", "Not enough parameters");
 		sendToClient(it->first, msgError);
-		// sendToClient(it->first, incor_format);
 		return ;
 	}
 
@@ -722,7 +721,9 @@ void Server::handle_kick(vector<string> tokens, map<int, Client>::iterator it)
 {
 	if (tokens.size() < 3)
 	{
-		sendToClient(it->first, incor_format);
+		// 461: le probleme sur parametres manquants ou invalides *****
+		std::string msgError = ircServerMsg("461", it->second.get_nickname(), "KICK", "Not enough parameters");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
