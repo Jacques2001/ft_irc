@@ -586,9 +586,11 @@ void Server::broadcastToChannel(const string& channelName, const string& msg, in
 
 void Server::handle_part(vector<string> tokens, map<int, Client>::iterator it)
 {
+	// 461: le probleme sur parametres manquants ou invalides *****
 	if (tokens.size() != 2)
 	{
-		sendToClient(it->first, incor_format);
+		std::string msgError = ircServerMsg("461", it->second.get_nickname(), "PART", "Not enough parameters");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
