@@ -220,8 +220,7 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 {
 	if (tokens.size() < 3)
 	{
-		// std::string msgError = ircServerMsg("461", it->second.get_nickname(), "PRIVMSG", "Not enough parameters");
-		// sendToClient(it->first, msgError);
+		// *****
 		sendToClient(it->first, incor_format);
 		return ;
 	}
@@ -322,6 +321,9 @@ void Server::handle_connection()
 		(struct sockaddr *)&client_addr, &addr_size); // on accepte le client                    
 	if (client_fd < 0)
 	{
+		// je laisse ce message d'erreur,
+		// car le server envoie des reponses irc au client, 
+		// mais ici il n'y a pas encore de client_fd valide *****
 		cerr << RED <<  "not accepted" << RESET << endl;
 		return ;
 	}
@@ -356,6 +358,7 @@ void Server::handle_input(int i)
 		_clients.erase(curr_fd);
 	
 		cout << YELLOW << "Client " << curr_fd << " disconnected" << RESET << endl;
+		// le client est deja deconnecte: impossible d'envoyer une reponse irc *****
 		return ;
 	}
 
@@ -370,6 +373,7 @@ void Server::handle_input(int i)
 		_clients.erase(curr_fd);
 
 		cerr << RED << "Error: recv failed on client " << curr_fd << RESET << endl;
+		// pas de reponse irc: impossible de lire les donnees du client *****
 		return ;
 	}
 
@@ -396,15 +400,22 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 {
 	if (tokens.size() < 2 || tokens.size() > 3)
 	{
-		sendToClient(it->first, incor_format);
+		// j'ai modifie comme 461 d'abord,
+		// parce que c'est le probleme sur parametres manquants ou invalides pour JOIN *****
+		std::string msgError = ircServerMsg("461", it->second.get_nickname(), "JOIN", "Not enough parameters");
+		sendToClient(it->first, msgError);
+		// sendToClient(it->first, incor_format);
 		return ;
 	}
 
 	string channelName = tokens[1];
 
+	// 403 ? puisque c'est le probleme du nom du channel invalide ou inexistant (ex. sans #) ***** 
 	if (channelName.empty() || channelName[0] != '#')
 	{
-		sendToClient(it->first, incor_format);
+		std::string msgError = ircServerMsg("403", it->second.get_nickname(), channelName, "No such channel");
+		sendToClient(it->first, msgError);
+		// sendToClient(it->first, incor_format);
 		return ;
 	}
 
