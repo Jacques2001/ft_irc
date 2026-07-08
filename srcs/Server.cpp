@@ -845,7 +845,6 @@ void Server::handle_invite(vector<string> tokens, map<int, Client>::iterator it)
 	{
 		std::string	msgError = ircServerMsg("443", it->second.get_nickname(), targetNick + " " + channelName, "is already on channel");
 		sendToClient(it->first, msgError);
-		// sendToClient(it->first, "Error: user already on channel\r\n");
 		return ;
 	}
 
@@ -857,7 +856,18 @@ void Server::handle_invite(vector<string> tokens, map<int, Client>::iterator it)
 					 + " INVITE " + targetNick + " " + channelName + "\r\n";
 
 	sendToClient(targetIt->first, inviteMsg);
-	sendToClient(it->first, "Invited " + targetNick + " to " + channelName + "\r\n");
+
+	// 341: quand on invite, il faut faire un message 341. alors j'en ai ajoute ~~~
+	// ca doit afficher ce format: "<client> <nick> <channel>"
+	// vu que la fonction ircServerMsg, ca finit toujours par " :",
+	// j'ai pas applique cette fonction-la
+	std::string	msg341 = ":ircserv 341 ";
+	if (it->second.get_nickname().empty())
+		msg341 += "*";
+	else
+		msg341 += it->second.get_nickname();
+	msg341 += " " + targetNick + " " + channelName + "\r\n";
+	sendToClient(it->first, msg341);
 }
 
 void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
