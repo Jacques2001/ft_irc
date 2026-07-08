@@ -441,7 +441,10 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 	Channel& channel = _channels[channelName];
 
 	if (channel.is_member(it->first))
+	{
+		// std::cout << "join error" << std::endl;
 		return ; // on ajoute un message supplementaire ou on laisse comme ca ? *****
+	}
 	
 	if (channel.is_invite_only() && !channel.is_invited(it->first))
 	{
@@ -796,7 +799,6 @@ void Server::handle_invite(vector<string> tokens, map<int, Client>::iterator it)
 	{
 		std::string msgError = ircServerMsg("461", it->second.get_nickname(), "INVITE", "Not enough parameters");
 		sendToClient(it->first, msgError);
-		// sendToClient(it->first, incor_format);
 		return ;
 	}
 
@@ -861,6 +863,7 @@ void Server::handle_invite(vector<string> tokens, map<int, Client>::iterator it)
 	// ca doit afficher ce format: "<client> <nick> <channel>"
 	// vu que la fonction ircServerMsg, ca finit toujours par " :",
 	// j'ai pas applique cette fonction-la
+
 	std::string	msg341 = ":ircserv 341 ";
 	if (it->second.get_nickname().empty())
 		msg341 += "*";
@@ -872,9 +875,11 @@ void Server::handle_invite(vector<string> tokens, map<int, Client>::iterator it)
 
 void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
 {
+	// 461: le probleme sur parametres manquants ou invalides *****
 	if (tokens.size() < 3)
 	{
-		sendToClient(it->first, incor_format);
+		std::string msgError = ircServerMsg("461", it->second.get_nickname(), "MODE", "Not enough parameters");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 
@@ -915,9 +920,11 @@ void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
 		channel.set_topic_restricted(false);
 	else if (mode == "+k")
 	{
+		// 461: le probleme sur parametres manquants ou invalides *****
 		if (tokens.size() != 4)
 		{
-			sendToClient(it->first, incor_format);
+			std::string msgError = ircServerMsg("461", it->second.get_nickname(), "MODE " + mode, "Not enough parameters");
+			sendToClient(it->first, msgError);
 			return ;
 		}
 
@@ -927,9 +934,11 @@ void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
 		channel.remove_key();
 	else if (mode == "+l")
 	{
+		// 461: le probleme sur parametres manquants ou invalides *****
 		if (tokens.size() != 4)
 		{
-			sendToClient(it->first, incor_format);
+			std::string msgError = ircServerMsg("461", it->second.get_nickname(), "MODE " + mode, "Not enough parameters");
+			sendToClient(it->first, msgError);
 			return ;
 		}
 
@@ -937,6 +946,7 @@ void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
 		int limit;
 		char leftover;
 
+		// cas ambigu *****
 		if (!(ss >> limit) || (ss >> leftover) || limit <= 0)
 		{
 			sendToClient(it->first, "Error: invalid channel limit\r\n");
@@ -949,9 +959,11 @@ void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
 		channel.remove_limit();
 	else if (mode == "+o" || mode == "-o")
 	{
+		// 461: le probleme sur parametres manquants ou invalides *****
 		if (tokens.size() != 4)
 		{
-			sendToClient(it->first, incor_format);
+			std::string msgError = ircServerMsg("461", it->second.get_nickname(), "MODE " + mode, "Not enough parameters");
+			sendToClient(it->first, msgError);
 			return ;
 		}
 
@@ -985,10 +997,14 @@ void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
 	}
 	else
 	{
-		sendToClient(it->first, "Error: unknown mode\r\n");
+		// 472: mode inconnu
+		std::string	modeFlag = mode;
+		if (mode.size() > 1 && (mode[0] == '+' || mode[0] == '-'))
+			modeFlag = mode.substr(1);
+		std::string	msgError = ircServerMsg("472", it->second.get_nickname(), modeFlag, "is unknown mode char to me");
+		sendToClient(it->first, msgError);
 		return ;
 	}
-	
 
    string modeMsg = ":" + it->second.get_nickname() + "!"
 			   + it->second.get_username() + "@"
