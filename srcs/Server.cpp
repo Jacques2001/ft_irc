@@ -421,7 +421,6 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 	{
 		std::string msgError = ircServerMsg("403", it->second.get_nickname(), channelName, "No such channel");
 		sendToClient(it->first, msgError);
-		// sendToClient(it->first, incor_format);
 		return ;
 	}
 
@@ -437,7 +436,11 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 
 	if (channel.is_member(it->first))
 	{
-		return ; // on ajoute un message supplementaire ou on laisse comme ca ? *****
+		// on ajoute un message supplementaire ou on laisse comme ca ? *****
+		// si un client est deja membre du channel et il envoie a nouveau "JOIN #channel",
+		// est-ce qu'il faut ignorer la commande comme maintenant ?
+		// ou bien il faudrait lui renvoyer les reponses JOIN ou 353 ou 366 ?
+		return ;
 	}
 	
 	if (channel.is_invite_only() && !channel.is_invited(it->first))
@@ -678,11 +681,6 @@ void Server::handle_topic(vector<string> tokens, map<int, Client>::iterator it)
 	}
 
 	// ca depend du nombre d'arguments (1 arg = afficher, plus d'un = erreur)
-	// if (tokens[2].empty() || tokens[2][0] != ':')
-	// {
-	// 	sendToClient(it->first, incor_format);
-	// 	return ;
-	// }
 
 	// s'il y a pas de ':' mais plusieurs arg -> error
 	if (tokens.size() > 3 && tokens[2][0] != ':')
