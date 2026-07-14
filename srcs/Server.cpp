@@ -158,7 +158,8 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
 		{
 			if (tokens[1].size() > 9)
 			{
-				sendToClient(it->first, nick_too_long); // il faudrait gerer le message d'erreur irc ? comme 432 ? *****  -> 432
+				std::string msgError = ircServerMsg("432", "", tokens[1], "Erroneous nickname");
+				sendToClient(it->first, msgError);
 				return ;
 			}
 			set_nick(tokens[1], it);
