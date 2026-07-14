@@ -677,14 +677,25 @@ void Server::handle_topic(vector<string> tokens, map<int, Client>::iterator it)
 		return ;
 	}
 
-	// ***** -> ca depend du nombre d'arguments (1 arg = afficher, plus d'un = erreur)
-	if (tokens[2].empty() || tokens[2][0] != ':')
+	// ca depend du nombre d'arguments (1 arg = afficher, plus d'un = erreur)
+	// if (tokens[2].empty() || tokens[2][0] != ':')
+	// {
+	// 	sendToClient(it->first, incor_format);
+	// 	return ;
+	// }
+
+	// s'il y a pas de ':' mais plusieurs arg -> error
+	if (tokens.size() > 3 && tokens[2][0] != ':')
 	{
 		sendToClient(it->first, incor_format);
 		return ;
 	}
 
-	string topic = tokens[2].substr(1);
+	string topic;
+	if (tokens[2][0] == ':')
+		topic = tokens[2].substr(1); // ex) tokens[2] = ":coucou", tokens[2].substr(1) = "coucou"
+	else
+		topic = tokens[2];
 
 	for (size_t i = 3; i < tokens.size(); i++)
 		topic += " " + tokens[i];
