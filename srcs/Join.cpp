@@ -34,13 +34,7 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 	Channel& channel = _channels[channelName];
 
 	if (channel.is_member(it->first))
-	{
-		// on ajoute un message supplementaire ou on laisse comme ca ? *****
-		// si un client est deja membre du channel et il envoie a nouveau "JOIN #channel",
-		// est-ce qu'il faut ignorer la commande comme maintenant ?
-		// ou bien il faudrait lui renvoyer les reponses JOIN ou 353 ou 366 ?
 		return ;
-	}
 
 	if (channel.is_invite_only() && !channel.is_invited(it->first))
 	{
