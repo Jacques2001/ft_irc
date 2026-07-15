@@ -20,7 +20,6 @@
 #include "Client.hpp"
 #include "Channel.hpp"
 
-
 using namespace std;
 
 #define MAX_EVENT 64

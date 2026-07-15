@@ -11,7 +11,19 @@ RESET   = \033[0m
 SRCS        =   main.cpp \
                 srcs/Client.cpp \
                 srcs/Server.cpp \
-				srcs/Channel.cpp
+				srcs/PrivMsg.cpp \
+				srcs/Parse.cpp \
+				srcs/Connection.cpp \
+				srcs/Input.cpp \
+				srcs/ChannelMsg.cpp \
+				srcs/PartOnly.cpp \
+				srcs/Join.cpp \
+				srcs/Topic.cpp \
+				srcs/Kick.cpp \
+				srcs/Invite.cpp \
+				srcs/Mode.cpp \
+				srcs/Channel.cpp \
+				srcs/Helper.cpp
 
 OBJS        = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DEP			= $(OBJS:.o=.d)
