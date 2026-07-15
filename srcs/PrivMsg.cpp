@@ -39,7 +39,7 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 		return ;
 	}
 
-	if (tokens[2][0] != ':')
+	if (tokens[2][0] != ':' && tokens.size() > 3)
 	{
 		sendToClient(it->first, incor_format);
 		return ;
@@ -48,9 +48,16 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 	string final_msg = ":" + it->second.get_nickname() + "!"
 						+ it->second.get_username() + "@" + it->second.get_ip()
 						+ " PRIVMSG " + tokens[1];
-
+	
 	for (size_t i = 2; i < tokens.size(); i++)
+	{
+		if (tokens.size() == 3 && tokens[2][0] != ':')
+		{
+			final_msg += " :" + tokens[2];
+			break;
+		}	
 		final_msg += " " + tokens[i];
+	}
 
 	final_msg += "\r\n";
 
