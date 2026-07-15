@@ -39,6 +39,8 @@ void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it
 		return ;
 	}
 
+	// ***** faire en sorte que lorsque le client envoie seulement 1 message, qu'il puisse le faire 
+	// sans l'argument ':'
 	if (tokens[2][0] != ':')
 	{
 		sendToClient(it->first, incor_format);
