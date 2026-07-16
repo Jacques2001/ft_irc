@@ -14,7 +14,7 @@ void check_args(char** av)
 
     int port = std::atoi(av[1]);
     if (port < 1024 || port > 65535)
-    throw runtime_error("port incorrect");
+        throw runtime_error("port incorrect");
 }
 
 int main(int ac, char **av)

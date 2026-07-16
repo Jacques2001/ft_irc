@@ -12,12 +12,6 @@ void Server::parse_line(string line, int curr_fd)
 	if (it == _clients.end())
 		return ;
 
-	if (it->second.get_connection() == 0)
-	{
-		connection_process(line, it);
-		return ;
-	}
-
 	stringstream ss(line);
 	string token;
 	vector<string> tokens;
@@ -28,9 +22,34 @@ void Server::parse_line(string line, int curr_fd)
 	if (tokens.empty())
 		return ;
 
+	if (tokens[0] == "CAP")
+	{
+		if (tokens.size() >= 2 && tokens[1] == "LS")
+		{
+			string capReply = ":ircserv CAP * LS :\r\n";
+			sendToClient(curr_fd, capReply);
+		}
+		return ;
+	}
+
+	if (tokens[0] == "PING" && tokens.size() >= 2)
+	{
+		string payload = tokens[1];
+		if (!payload.empty() && payload[0] == ':')
+			payload = payload.substr(1);
+		string pongReply = ":ircserv PONG ircserv :" + payload + "\r\n";
+		sendToClient(curr_fd, pongReply);
+		return ;
+	}
+
+	if (it->second.get_connection() == 0)
+	{
+		connection_process(line, it);
+		return ;
+	}
+
 	if (tokens[0] == "NICK" && tokens.size() == 2)
 		set_nick(tokens[1], it);
-	// else if (tokens[0] == "PRIVMSG" && tokens.size() >= 3)
 	else if (tokens[0] == "PRIVMSG") // pour lier a handle_prv_msg, j'ai modifie cette partie
 		handle_prv_msg(tokens, it);
 	else if (tokens[0] == "JOIN")
