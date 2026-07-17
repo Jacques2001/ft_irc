@@ -38,6 +38,11 @@ To run the program, start the server with the following syntax:
 * `<port>`: The port number the server will listen on for incoming connections.
 * `<password>`: The connection password required for clients to authenticate.
 
+Since the evaluation will be done on irssi, the evaluator shall know these commands
+`/connect localhost <port> <password>`
+irssi allows users to have an interface where they can chat. All command listed above will work
+on irssi, try /<command (lowercase | uppercase)> <argument>
+
 ## Resources
 
 * [Modern IRC Protocol](https://modern.ircdocs.horse/)

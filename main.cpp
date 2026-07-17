@@ -9,7 +9,7 @@ void check_args(char** av)
     for (size_t i = 0 ; av[1][i]; ++i)
     {
         if (!isdigit(av[1][i]))
-                throw runtime_error("non digit port");
+            throw runtime_error("non digit port");
     }
 
     int port = std::atoi(av[1]);

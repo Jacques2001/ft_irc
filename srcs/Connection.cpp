@@ -89,7 +89,10 @@ void Server::handle_connection()
 		return ;
 	}
 	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0)
+	{
+		close_fds();
 		throw runtime_error("fcntl(1)");
+	}
 	cout << GREEN << "Client " << client_fd << " connected" << RESET << endl;
 	_clients.insert(make_pair(client_fd, Client(client_fd))); // on met le client dans notre std::map
 	_clients[client_fd].set_ip(inet_ntoa(client_addr.sin_addr)); // on recupere l'adresse ip
@@ -98,5 +101,8 @@ void Server::handle_connection()
 	client_ev.events = EPOLLIN;
 	client_ev.data.fd = client_fd;
 	if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client_fd, &client_ev) < 0)
+	{
+		close_fds();
 		throw runtime_error("epoll_ctl(1)");
+	}
 }

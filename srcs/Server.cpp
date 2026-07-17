@@ -108,15 +108,20 @@ void Server::start()
 	signal(SIGINT, intHandler);
 	_epoll_fd = epoll_create1(0); // _epollfd sera un fd qui surveillera les _events
 	if (_epoll_fd < 0)
+	{
+		close_fds();
 		throw runtime_error("epoll_create1");
-
+	}
 	struct epoll_event ev;
 	ev.events = EPOLLIN; // evenements rentrants, lecture seule
 	ev.data.fd = _socket_fd;
 
 	//  ajoute mon serveur (_socket_fd) dans la liste des evenements a surveiller (_epoll_fd)
 	if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _socket_fd, &ev) < 0)
+	{
+		close_fds();
 		throw runtime_error("epoll_ctl");
+	}
 
 	cout << PURPLE << "Server listening ..." << RESET << endl;
 
@@ -125,7 +130,10 @@ void Server::start()
 		int ev_rdy = epoll_wait(_epoll_fd, _events, MAX_EVENT, -1); // endors le programme
 		// le programme se reveillera quand il y aura un evenement a gerer
 		if (ev_rdy < 0 && keepRunning)
+		{
+			close_fds();
 			throw runtime_error("epoll_wait()");
+		}
 		for (int i = 0; i < ev_rdy; i++) // rentre dans la boucle d'evenements
 		{
 			if (_events[i].data.fd == _socket_fd) // si c'est un client qui rentre
