@@ -69,6 +69,7 @@ class Server
         bool is_passcode(string line);
         bool check_double(string tokens, string flag);
         void set_nick(string tokens, map<int, Client>::iterator it);
+        void broadcastNickChange(const string& oldNick, const string& newNick, map<int, Client>::iterator it);
         void set_user(vector<string> tokens, map<int, Client>::iterator it);
         void handle_connection();
         void handle_input(int i);

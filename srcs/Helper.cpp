@@ -23,6 +23,8 @@ bool Server::check_double(string tokens, string flag)
 
 void Server::set_nick(string tokens, map<int, Client>::iterator it)
 {
+	std::string oldNick = it->second.get_nickname();
+
 	if (check_double(tokens, "nick"))
 	{
 		std::string	msgError = ircServerMsg("433", it->second.get_nickname(), tokens, "Nickname is already in use");
@@ -31,6 +33,35 @@ void Server::set_nick(string tokens, map<int, Client>::iterator it)
 	}
 	it->second.set_nickname(tokens);
 	it->second.has_nickname();
+
+	if (!oldNick.empty())
+		broadcastNickChange(oldNick, tokens, it);
+}
+
+void Server::broadcastNickChange(const string& oldNick, const string& newNick, map<int, Client>::iterator it)
+{
+	set<int> recipients;
+	recipients.insert(it->first);
+
+	for (map<string, Channel>::iterator chanIt = _channels.begin(); chanIt != _channels.end(); ++chanIt)
+	{
+		if (!chanIt->second.is_member(it->first))
+			continue ;
+
+		set<int> members = chanIt->second.get_members();
+		recipients.insert(members.begin(), members.end());
+	}
+
+	string nickMsg = ":" + oldNick + "!"
+				   + it->second.get_username() + "@"
+				   + it->second.get_ip()
+				   + " NICK :" + newNick + "\r\n";
+
+	for (set<int>::iterator recIt = recipients.begin(); recIt != recipients.end(); ++recIt)
+	{
+		if (_clients.find(*recIt) != _clients.end())
+			sendToClient(*recIt, nickMsg);
+	}
 }
 
 void Server::set_user(vector<string> tokens, map<int, Client>::iterator it)

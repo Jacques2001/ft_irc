@@ -3,3 +3,5 @@ ircserv
 *.o
 *.d
 vgscore.*
+doc.txt
+todo.txt
