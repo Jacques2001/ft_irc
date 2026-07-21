@@ -52,7 +52,8 @@ void Server::handle_topic(vector<string> tokens, map<int, Client>::iterator it)
 
 	if (tokens.size() > 3 && tokens[2][0] != ':')
 	{
-		sendToClient(it->first, incor_format);
+		std::string msgError = ircServerMsg("461", it->second.get_nickname(), "TOPIC", "Invalid parameters");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 

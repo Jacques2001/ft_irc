@@ -85,7 +85,8 @@ void Server::handle_mode(vector<string> tokens, map<int, Client>::iterator it)
 
         if (!(ss >> limit) || (ss >> leftover) || limit <= 0)
         {
-            sendToClient(it->first, "Error: invalid channel limit\r\n");
+            std::string msgError = ircServerMsg("461", it->second.get_nickname(), "MODE +l", "Invalid channel limit");
+            sendToClient(it->first, msgError);
             return ;
         }
 

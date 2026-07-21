@@ -50,7 +50,8 @@ void Server::handle_channel_msg(vector<string> tokens, map<int, Client>::iterato
 
 	if (tokens[2][0] != ':' && tokens.size() > 3)
 	{
-		sendToClient(it->first, incor_format);
+		std::string msgError = ircServerMsg("412", it->second.get_nickname(), "", "No text to send");
+		sendToClient(it->first, msgError);
 		return ;
 	}
 

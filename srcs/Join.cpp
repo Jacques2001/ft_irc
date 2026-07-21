@@ -10,8 +10,9 @@ void Server::handle_join(vector<string> tokens, map<int, Client>::iterator it)
 	}
 	else if (tokens.size() > 3)
 	{
-		sendToClient(it->first, incor_format);
-		return;
+		std::string msgError = ircServerMsg("461", it->second.get_nickname(), "JOIN", "Invalid parameters");
+		sendToClient(it->first, msgError);
+		return ;
 	}
 
 	string channelName = tokens[1];
