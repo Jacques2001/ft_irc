@@ -1,7 +1,5 @@
 #include "../includes/Server.hpp"
 
-//cette fonction sert a verifier si le client a bien rentre le mdp, nickname et username
-//avant de valider la connection
 void Server::connection_process(string line, map<int, Client>::iterator it)
 {
 	stringstream ss(line);
@@ -73,16 +71,13 @@ void Server::connection_process(string line, map<int, Client>::iterator it)
 	}
 }
 
-//cette fonction va gerer la connection de tous les nouveaux clients
-//et ajouter ce client a la liste de surveillance epoll
 void Server::handle_connection()
 {
-	// on accueille le nouveau client
 	struct sockaddr_in client_addr;
 	socklen_t addr_size;
 	addr_size = sizeof(struct sockaddr_in);
 	int client_fd = accept(_socket_fd,
-		(struct sockaddr *)&client_addr, &addr_size); // on accepte le client
+		(struct sockaddr *)&client_addr, &addr_size);
 	if (client_fd < 0)
 	{
 		cerr << RED <<  "not accepted" << RESET << endl;
@@ -94,10 +89,10 @@ void Server::handle_connection()
 		throw runtime_error("fcntl(1)");
 	}
 	cout << GREEN << "Client " << client_fd << " connected" << RESET << endl;
-	_clients.insert(make_pair(client_fd, Client(client_fd))); // on met le client dans notre std::map
-	_clients[client_fd].set_ip(inet_ntoa(client_addr.sin_addr)); // on recupere l'adresse ip
+	_clients.insert(make_pair(client_fd, Client(client_fd)));
+	_clients[client_fd].set_ip(inet_ntoa(client_addr.sin_addr));
 
-	struct epoll_event client_ev; // on ajoute le client dans la liste de surveillance
+	struct epoll_event client_ev;
 	client_ev.events = EPOLLIN;
 	client_ev.data.fd = client_fd;
 	if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client_fd, &client_ev) < 0)

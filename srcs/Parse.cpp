@@ -1,8 +1,5 @@
 #include "../includes/Server.hpp"
 
-//cette fonction va parser et executer la ligne recu par le client
-//elle va d'abord checker si le client a bien le droit d'envoyer des messages
-//continuer a coder le channel
 void Server::parse_line(string line, int curr_fd)
 {
 	if (line.empty())
@@ -50,7 +47,7 @@ void Server::parse_line(string line, int curr_fd)
 
 	if (tokens[0] == "NICK" && tokens.size() == 2)
 		set_nick(tokens[1], it);
-	else if (tokens[0] == "PRIVMSG") // pour lier a handle_prv_msg, j'ai modifie cette partie
+	else if (tokens[0] == "PRIVMSG")
 		handle_prv_msg(tokens, it);
 	else if (tokens[0] == "JOIN")
 		handle_join(tokens, it);

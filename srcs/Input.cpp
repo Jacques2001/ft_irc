@@ -1,16 +1,13 @@
 #include "../includes/Server.hpp"
 
-//cette fonction va gerer tout ce que le client (qui est connecte)
-//va entrer comme input, l'input sera ensuite envoye a parse_line(...)
 void Server::handle_input(int i)
 {
-	//recv est l'equivalent de la fonction read()
-	int curr_fd = _events[i].data.fd; // on prend le fd de l'event
+	int curr_fd = _events[i].data.fd;
 
-	char buf[1024]; //buffer pour stocker le message du client
-	int size_buf = recv(curr_fd, buf, 1024, 0); //size_buf correspond a ce qui a pu etre lu
+	char buf[1024];
+	int size_buf = recv(curr_fd, buf, 1024, 0);
 
-	if (size_buf == 0) // si c'est = 0 c'est que le client s'est deconnecte
+	if (size_buf == 0)
 	{
 		epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, curr_fd, NULL);
 		removeClientFromChannels(curr_fd);
@@ -35,8 +32,6 @@ void Server::handle_input(int i)
 		return ;
 	}
 
-	//ces lignes ci-dessous sont faites pour regler le probleme de
-	//"donnees partielles" recues par recv()
 	_clients[curr_fd].appendToBuffer(buf, size_buf);
 	std::string &client_buffer = _clients[curr_fd].getBuffer();
 

@@ -1,10 +1,7 @@
 #include "../includes/Server.hpp"
 
-//cette fonction sert a traiter les messages privees envoyees entre client
-//le format du message envoye suit les directives du protocole IRC
 void Server::handle_prv_msg(vector<string> tokens, map<int, Client>::iterator it)
 {
-	// pour gerer le cas de mettre que PRIVMSG -> 461 code
 	if (tokens.size() < 2)
 	{
 		std::string	msgError = ircServerMsg("461", it->second.get_nickname(), "PRIVMSG", "Not enough parameters");

@@ -1,13 +1,10 @@
 #include "../includes/Server.hpp"
 
-//regarde si la ligne envoyee correspond au mdp
 bool Server::is_passcode(string line)
 {
 	return line == _server_passcode;
 }
 
-//cette fonction sert a checker si un nickname ou username
-//existe pas deja dans la base de donnees des clients
 bool Server::check_double(string tokens, string flag)
 {
 	map<int, Client>::iterator it = _clients.begin();
@@ -89,14 +86,6 @@ void Server::sendToClient(int fd, const std::string& msg)
 		cerr << RED << "Error: not send" << RESET << endl;
 }
 
-// fonction qui renvoie a un message du style irc
-// ex. :ircserv 001 jacques :Welcome to the ft_irc network jacques
-// parametres
-// - code: ex. 001 (welcome), 403 (no such channel), etc
-// - nick: nickname
-// - detail: des info supplementaires pour certaines reponses irc ()
-//   ex. :ircserv 403 nickname #test :No such channel (<- detail = #test)
-// - msg: message
 std::string	Server::ircServerMsg(const std::string& code, const std::string& nick, const std::string& detail, const std::string& msg)
 {
 	std::string result = ":ircserv " + code + " ";
