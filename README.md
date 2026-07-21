@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by **jchiu | dinza-cr | wooyang**.*
+*This project has been created as part of the 42 curriculum by **jchiu,  dinza-cr, wooyang**.*
 
 ## Description
 
