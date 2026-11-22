@@ -52,4 +52,4 @@ on irssi, try /<command (lowercase | uppercase)> <argument>
 **AI Usage**
 AI was used as an assistive tool to help complete the following tasks during the project:
 * **Documentation:** Understanding the basis of required C/C++ system functions, non-blocking I/O concepts, and how to properly test them.
-* **Learning:** Breaking down the details of the IRC Protocol and understanding the RFC standards.
+* **Learning:** Breaking down the details of the IRC Protocol and understanding the RFC standards
